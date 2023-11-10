@@ -21,12 +21,12 @@ fn main() {
     let reader = std::io::BufReader::new(file_input);
 
     let mut elf_cal: usize = 0;
-    let mut max_elf_cal: usize = 0;
+    let mut elves: Vec<usize> = Vec::new();
     for (num, line) in reader.lines().enumerate() {
         match line {
             Ok(line) => {
                 if line.is_empty() {
-                    max_elf_cal = std::cmp::max(elf_cal, max_elf_cal);
+                    elves.push(elf_cal);
                     elf_cal = 0;
                 } else {
                     let cal: usize = match line.parse() {
@@ -47,5 +47,12 @@ fn main() {
         }
     }
 
-    println!("Max elf calories = {}", max_elf_cal);
+    elves.sort();
+    let mut sum_top3_cals: usize = 0;
+    for cal in elves.iter().rev().take(3) {
+        sum_top3_cals += cal;
+    }
+
+    println!("Top 1 elf calories = {}", elves.last().unwrap());
+    println!("Sum top 3 elf calories = {}", sum_top3_cals);
 }
