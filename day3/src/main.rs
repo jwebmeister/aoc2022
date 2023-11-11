@@ -1,7 +1,21 @@
+use itertools::Itertools;
 use std::collections::HashSet;
 use std::io::prelude::*;
 
 fn main() {
+    let file_input = open_file().ok().unwrap();
+    let mut reader = std::io::BufReader::new(file_input);
+
+    let part1_result = part1(&mut reader);
+    println!("part 1 result = {}", part1_result);
+
+    reader.rewind().unwrap();
+
+    let part2_result = part2(&mut reader);
+    println!("part 2 result = {}", part2_result);
+}
+
+fn open_file() -> std::io::Result<std::fs::File> {
     let filepath_input = "./src/input.txt";
     let alt_filepath_input = "./day3/src/input.txt";
     let file_input = match std::fs::File::open(filepath_input) {
@@ -20,30 +34,54 @@ fn main() {
                     filepath_input, alt_filepath_input
                 );
                 println!("{}", e);
-                return;
+                return Err(e);
             }
         },
     };
+    Ok(file_input)
+}
 
-    let reader = std::io::BufReader::new(file_input);
-    let mut total_sum_priority: isize = 0;
+fn part2<R: std::io::BufRead>(reader: &mut R) -> usize {
+    let total_sum: usize = reader
+        .lines()
+        .map(|line| {
+            let hs: HashSet<usize> = line
+                .unwrap()
+                .chars()
+                .map(|c| priority(c).unwrap())
+                .collect();
+            hs
+        })
+        .chunks(3)
+        .into_iter()
+        .map(|chunk| {
+            chunk
+                .reduce(|a, b| a.intersection(&b).copied().collect())
+                .unwrap()
+                .iter()
+                .sum::<usize>()
+        })
+        .sum();
+    // println!("Total sum of badge priorities = {}", total_sum);
+    total_sum
+}
+
+fn part1<R: std::io::BufRead>(reader: &mut R) -> usize {
+    let mut total_sum: usize = 0;
     for (num, line) in reader.lines().enumerate() {
         match line {
             Ok(line) => {
                 let intersect: HashSet<usize> = get_intersect(&line);
-                intersect
-                    .iter()
-                    .for_each(|i| total_sum_priority += *i as isize);
+                intersect.iter().for_each(|i| total_sum += *i);
             }
             Err(e) => {
                 println!("Error reading input on line {}", num);
                 println!("{}", e);
-                return;
             }
         }
     }
-
-    println!("Total = {}", total_sum_priority);
+    // println!("Total = {}", total_sum);
+    total_sum
 }
 
 fn priority(c: char) -> Option<usize> {
@@ -93,15 +131,18 @@ mod tests {
     }
 
     #[test]
-    fn sum_intersects_works() {
+    fn part1_works() {
         let s = "vJrwpWtwJgWrhcsFMMfFFhFp\njqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL\nPmmdzqPrVvPwwTWBwg\nwMqvLMZHhHMvwLHjbvcjnnSBnvTQFn\nttgJtRGJQctTZtZT\nCrZsJsPPZsGzwwsLwLmpwMDw";
-        let mut total_sum_priority: isize = 0;
-        for line in s.lines() {
-            let intersect: HashSet<usize> = get_intersect(&line);
-            intersect
-                .iter()
-                .for_each(|i| total_sum_priority += *i as isize);
-        }
-        assert_eq!(total_sum_priority, 157);
+        let mut reader = std::io::BufReader::new(s.as_bytes());
+        let total_sum = part1(&mut reader);
+        assert_eq!(total_sum, 157);
+    }
+
+    #[test]
+    fn part2_works() {
+        let s = "vJrwpWtwJgWrhcsFMMfFFhFp\njqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL\nPmmdzqPrVvPwwTWBwg\nwMqvLMZHhHMvwLHjbvcjnnSBnvTQFn\nttgJtRGJQctTZtZT\nCrZsJsPPZsGzwwsLwLmpwMDw";
+        let mut reader = std::io::BufReader::new(s.as_bytes());
+        let total_sum = part2(&mut reader);
+        assert_eq!(total_sum, 70);
     }
 }
