@@ -12,7 +12,7 @@ fn main() {
     reader.rewind().unwrap();
 
     let part2_result = part2(&mut reader);
-    println!("part 2 result = {}", part2_result);
+    println!("part 2 result = {:?}", part2_result);
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {
@@ -41,28 +41,39 @@ fn open_file() -> std::io::Result<std::fs::File> {
     Ok(file_input)
 }
 
-fn part2<R: std::io::BufRead>(reader: &mut R) -> usize {
-    let total_sum: usize = reader
+fn part2<R: std::io::BufRead>(reader: &mut R) -> Result<usize, Box<dyn std::error::Error>> {
+    let total_sum = reader
         .lines()
-        .map(|line| {
-            let hs: HashSet<usize> = line
-                .unwrap()
-                .chars()
-                .map(|c| priority(c).unwrap())
-                .collect();
-            hs
-        })
+        .map(
+            |line| -> Result<HashSet<usize>, Box<dyn std::error::Error>> {
+                let l = line?;
+                let hs: HashSet<usize> = l
+                    .chars()
+                    .map(|c| match priority(c) {
+                        Some(p) => Ok(p),
+                        _ => Err("Didn't work"),
+                    })
+                    .collect::<Result<HashSet<usize>, _>>()?;
+                Ok(hs)
+            },
+        )
         .chunks(3)
         .into_iter()
-        .map(|chunk| {
-            chunk
-                .reduce(|a, b| a.intersection(&b).copied().collect())
-                .unwrap()
-                .iter()
-                .sum::<usize>()
+        .map(|chunk| -> Result<usize, Box<dyn std::error::Error>> {
+            let intersect = chunk.reduce(
+                |a, b| -> Result<HashSet<usize>, Box<dyn std::error::Error>> {
+                    let a = a?;
+                    let b = b?;
+                    let intersect = a.intersection(&b).copied().collect();
+                    Ok(intersect)
+                },
+            );
+            match intersect {
+                Some(x) => Ok(x?.iter().sum()),
+                None => Ok(0),
+            }
         })
-        .sum();
-    // println!("Total sum of badge priorities = {}", total_sum);
+        .sum::<Result<usize, _>>();
     total_sum
 }
 
@@ -143,6 +154,6 @@ mod tests {
         let s = "vJrwpWtwJgWrhcsFMMfFFhFp\njqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL\nPmmdzqPrVvPwwTWBwg\nwMqvLMZHhHMvwLHjbvcjnnSBnvTQFn\nttgJtRGJQctTZtZT\nCrZsJsPPZsGzwwsLwLmpwMDw";
         let mut reader = std::io::BufReader::new(s.as_bytes());
         let total_sum = part2(&mut reader);
-        assert_eq!(total_sum, 70);
+        assert_eq!(total_sum.unwrap(), 70);
     }
 }
