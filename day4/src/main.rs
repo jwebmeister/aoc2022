@@ -14,7 +14,7 @@ fn main() {
     println!("Any overlap pairs = {}", count_overlap);
 }
 
-fn count_any_overlap(parsed: &Vec<SectionAssignment>) -> usize {
+fn count_any_overlap(parsed: &[SectionAssignment]) -> usize {
     parsed
         .iter()
         .map(|sa| check_any_overlap(*sa) as usize)
@@ -35,7 +35,7 @@ fn check_any_overlap(sa: SectionAssignment) -> bool {
     !(amax_lt_bmin | bmax_lt_amin | amin_gt_bmax | bmin_gt_amax)
 }
 
-fn count_complete_overlap(parsed: &Vec<SectionAssignment>) -> usize {
+fn count_complete_overlap(parsed: &[SectionAssignment]) -> usize {
     parsed
         .iter()
         .map(|sa| check_complete_overlap(*sa) as usize)
