@@ -8,11 +8,34 @@ fn main() {
     let file_input = open_file().ok().unwrap();
     let mut reader = std::io::BufReader::new(file_input);
     let parsed = parse_input(&mut reader).unwrap();
-    let count_contained: usize = count_complete_overlap(parsed);
+    let count_contained: usize = count_complete_overlap(&parsed);
     println!("Fully contained pairs = {}", count_contained);
+    let count_overlap: usize = count_any_overlap(&parsed);
+    println!("Any overlap pairs = {}", count_overlap);
 }
 
-fn count_complete_overlap(parsed: Vec<SectionAssignment>) -> usize {
+fn count_any_overlap(parsed: &Vec<SectionAssignment>) -> usize {
+    parsed
+        .iter()
+        .map(|sa| check_any_overlap(*sa) as usize)
+        .sum()
+}
+
+fn check_any_overlap(sa: SectionAssignment) -> bool {
+    let amin = sa.0;
+    let amax = sa.1;
+    let bmin = sa.2;
+    let bmax = sa.3;
+
+    let amax_lt_bmin = amax < bmin;
+    let bmax_lt_amin = bmax < amin;
+    let amin_gt_bmax = amin > bmax;
+    let bmin_gt_amax = bmin > amax;
+
+    !(amax_lt_bmin | bmax_lt_amin | amin_gt_bmax | bmin_gt_amax)
+}
+
+fn count_complete_overlap(parsed: &Vec<SectionAssignment>) -> usize {
     parsed
         .iter()
         .map(|sa| check_complete_overlap(*sa) as usize)
@@ -129,8 +152,45 @@ mod tests {
             (2, 6, 4, 8),
         ];
 
-        let count = count_complete_overlap(v);
+        let count = count_complete_overlap(&v);
 
         assert_eq!(2, count);
+    }
+
+    #[test]
+    fn check_any_overlap_works() {
+        let v: Vec<SectionAssignment> = vec![
+            (2, 4, 6, 8),
+            (2, 3, 4, 5),
+            (5, 7, 7, 9),
+            (2, 8, 3, 7),
+            (6, 6, 4, 6),
+            (2, 6, 4, 8),
+        ];
+
+        let mut overlaps = v.iter().map(|sa| check_any_overlap(*sa));
+
+        assert_eq!(false, overlaps.next().unwrap());
+        assert_eq!(false, overlaps.next().unwrap());
+        assert_eq!(true, overlaps.next().unwrap());
+        assert_eq!(true, overlaps.next().unwrap());
+        assert_eq!(true, overlaps.next().unwrap());
+        assert_eq!(true, overlaps.next().unwrap());
+    }
+
+    #[test]
+    fn count_any_overlap_works() {
+        let v: Vec<SectionAssignment> = vec![
+            (2, 4, 6, 8),
+            (2, 3, 4, 5),
+            (5, 7, 7, 9),
+            (2, 8, 3, 7),
+            (6, 6, 4, 6),
+            (2, 6, 4, 8),
+        ];
+
+        let count = count_any_overlap(&v);
+
+        assert_eq!(4, count);
     }
 }
