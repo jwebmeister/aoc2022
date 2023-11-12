@@ -2,15 +2,36 @@ use itertools::Itertools;
 use std::io::prelude::*;
 
 type BoxedError = Box<dyn std::error::Error>;
-type SectionAssignments = (usize, usize, usize, usize);
+type SectionAssignment = (usize, usize, usize, usize);
 
 fn main() {
     let file_input = open_file().ok().unwrap();
     let mut reader = std::io::BufReader::new(file_input);
-    let _parsed = parse_input(&mut reader);
+    let parsed = parse_input(&mut reader).unwrap();
+    let count_contained: usize = count_complete_overlap(parsed);
+    println!("Fully contained pairs = {}", count_contained);
 }
 
-fn parse_input<R: std::io::BufRead>(reader: &mut R) -> Result<Vec<SectionAssignments>, BoxedError> {
+fn count_complete_overlap(parsed: Vec<SectionAssignment>) -> usize {
+    parsed
+        .iter()
+        .map(|sa| check_complete_overlap(*sa) as usize)
+        .sum()
+}
+
+fn check_complete_overlap(sa: SectionAssignment) -> bool {
+    let amin = sa.0;
+    let amax = sa.1;
+    let bmin = sa.2;
+    let bmax = sa.3;
+
+    let a_in_b = amin >= bmin && amax <= bmax;
+    let b_in_a = bmin >= amin && bmax <= amax;
+
+    a_in_b | b_in_a
+}
+
+fn parse_input<R: std::io::BufRead>(reader: &mut R) -> Result<Vec<SectionAssignment>, BoxedError> {
     reader
         .lines()
         .map(|line| -> Result<(usize, usize, usize, usize), BoxedError> {
@@ -65,7 +86,7 @@ mod tests {
         let s = "2-4,6-8\n2-3,4-5\n5-7,7-9\n2-8,3-7\n6-6,4-6\n2-6,4-8";
         let mut reader = std::io::BufReader::new(s.as_bytes());
         let parsed = parse_input(&mut reader).unwrap();
-        let v: Vec<SectionAssignments> = vec![
+        let v: Vec<SectionAssignment> = vec![
             (2, 4, 6, 8),
             (2, 3, 4, 5),
             (5, 7, 7, 9),
@@ -74,5 +95,42 @@ mod tests {
             (2, 6, 4, 8),
         ];
         assert_eq!(parsed, v);
+    }
+
+    #[test]
+    fn check_complete_overlap_works() {
+        let v: Vec<SectionAssignment> = vec![
+            (2, 4, 6, 8),
+            (2, 3, 4, 5),
+            (5, 7, 7, 9),
+            (2, 8, 3, 7),
+            (6, 6, 4, 6),
+            (2, 6, 4, 8),
+        ];
+
+        let mut overlaps = v.iter().map(|sa| check_complete_overlap(*sa));
+
+        assert_eq!(false, overlaps.next().unwrap());
+        assert_eq!(false, overlaps.next().unwrap());
+        assert_eq!(false, overlaps.next().unwrap());
+        assert_eq!(true, overlaps.next().unwrap());
+        assert_eq!(true, overlaps.next().unwrap());
+        assert_eq!(false, overlaps.next().unwrap());
+    }
+
+    #[test]
+    fn count_complete_overlap_works() {
+        let v: Vec<SectionAssignment> = vec![
+            (2, 4, 6, 8),
+            (2, 3, 4, 5),
+            (5, 7, 7, 9),
+            (2, 8, 3, 7),
+            (6, 6, 4, 6),
+            (2, 6, 4, 8),
+        ];
+
+        let count = count_complete_overlap(v);
+
+        assert_eq!(2, count);
     }
 }
