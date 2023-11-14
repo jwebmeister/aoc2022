@@ -1,15 +1,64 @@
-use std::io::prelude::*;
 extern crate nom;
 
 use nom::Finish;
+use std::io::prelude::*;
+use thiserror::Error;
 
 fn main() {
-    let mut crate_lines = vec![];
-
     let mut file_input = open_file().unwrap();
     let mut buffer = String::new();
     file_input.read_to_string(&mut buffer).unwrap();
 
+    let crate_lines = parse_crate_all_lines(&buffer);
+    let crate_columns = transpose_rev(crate_lines).unwrap();
+
+    for col in &crate_columns {
+        println!("{col:?}");
+    }
+}
+
+#[derive(Clone, PartialEq, PartialOrd)]
+struct Crate(char);
+
+impl std::fmt::Debug for Crate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "'{}'", self.0)
+    }
+}
+
+#[derive(Error, Debug)]
+enum MyError {
+    #[error("transpose_rev error, {0}")]
+    TransposeRev(String),
+}
+
+fn transpose_rev<T>(v: Vec<Vec<Option<T>>>) -> Result<Vec<Vec<T>>, MyError> {
+    if v.is_empty() {
+        return Err(MyError::TransposeRev("input Vec v is empty".to_string()));
+    };
+    let len = v[0].len();
+    let mut iters: Vec<_> = v.into_iter().map(|n| n.into_iter()).collect();
+    (0..len)
+        .map(|_| {
+            iters
+                .iter_mut()
+                .rev()
+                .filter_map(|n| match n.next() {
+                    Some(x) => match x {
+                        Some(a) => Some(Ok(a)),
+                        None => None,
+                    },
+                    None => Some(Err(MyError::TransposeRev(
+                        "input Vec v has a mismatch in dimensions".to_string(),
+                    ))),
+                })
+                .collect::<Result<Vec<T>, MyError>>()
+        })
+        .collect()
+}
+
+fn parse_crate_all_lines(buffer: &str) -> Vec<Vec<Option<Crate>>> {
+    let mut crate_lines = vec![];
     for line in buffer.lines() {
         if let Ok((_rest, crate_line)) =
             nom::combinator::all_consuming(parse_crate_line)(line).finish()
@@ -17,14 +66,8 @@ fn main() {
             crate_lines.push(crate_line);
         }
     }
-
-    for line in &crate_lines {
-        println!("{line:?}");
-    }
+    crate_lines
 }
-
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-struct Crate(char);
 
 fn parse_crate_line(i: &str) -> nom::IResult<&str, Vec<Option<Crate>>> {
     let (mut i, c) = parse_crate_or_hole(i)?;
@@ -145,5 +188,49 @@ mod tests {
             ";
         let result = parse_crate_line(s).unwrap();
         assert_eq!(vec![Some(Crate('D'),), None, None,], result.1)
+    }
+
+    #[test]
+    fn parse_crate_all_lines_works() {
+        let s = "\
+            [D]        \n\
+            [N] [C]    \n\
+            [Z] [M] [P]\n\
+             1   2   3 \n\
+            \n\
+            move 1 from 2 to 1\n\
+            move 3 from 1 to 3\n\
+            move 2 from 2 to 1\n\
+            move 1 from 1 to 2\n\
+            ";
+
+        let r = vec![
+            vec![Some(Crate('D')), None, None],
+            vec![Some(Crate('N')), Some(Crate('C')), None],
+            vec![Some(Crate('Z')), Some(Crate('M')), Some(Crate('P'))],
+        ];
+
+        let crate_lines = parse_crate_all_lines(s);
+
+        assert_eq!(crate_lines, r);
+    }
+
+    #[test]
+    fn transpose_rev_works() {
+        let v = vec![
+            vec![Some(Crate('D')), None, None],
+            vec![Some(Crate('N')), Some(Crate('C')), None],
+            vec![Some(Crate('Z')), Some(Crate('M')), Some(Crate('P'))],
+        ];
+
+        let r = vec![
+            vec![Crate('Z'), Crate('N'), Crate('D')],
+            vec![Crate('M'), Crate('C')],
+            vec![Crate('P')],
+        ];
+
+        let crate_cols = transpose_rev(v).unwrap();
+
+        assert_eq!(r, crate_cols);
     }
 }
