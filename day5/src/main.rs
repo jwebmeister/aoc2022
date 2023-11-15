@@ -34,27 +34,37 @@ enum MyError {
 
 fn transpose_rev<T>(v: Vec<Vec<Option<T>>>) -> Result<Vec<Vec<T>>, MyError> {
     if v.is_empty() {
-        return Err(MyError::TransposeRev("input Vec v is empty".to_string()));
+        return Err(MyError::TransposeRev("input Vec `v` is empty".to_string()));
     };
+
     let len = v[0].len();
+    if len <= 0 {
+        return Err(MyError::TransposeRev("interior Vec is empty".to_string()));
+    };
+
+    let mut errs = vec![];
     let mut iters: Vec<_> = v.into_iter().map(|n| n.into_iter()).collect();
-    (0..len)
+    let r = (0..len)
         .map(|_| {
             iters
                 .iter_mut()
                 .rev()
                 .filter_map(|n| match n.next() {
-                    Some(x) => match x {
-                        Some(a) => Some(Ok(a)),
-                        None => None,
-                    },
-                    None => Some(Err(MyError::TransposeRev(
-                        "input Vec v has a mismatch in dimensions".to_string(),
-                    ))),
+                    Some(x) => x,
+                    None => {
+                        errs.push(MyError::TransposeRev(
+                            "interior Vec's have mismatching dimensions".to_string(),
+                        ));
+                        None
+                    }
                 })
-                .collect::<Result<Vec<T>, MyError>>()
+                .collect::<Vec<T>>()
         })
-        .collect()
+        .collect();
+    match errs.pop() {
+        Some(e) => Err(e),
+        None => Ok(r),
+    }
 }
 
 fn parse_crate_all_lines(buffer: &str) -> Vec<Vec<Option<Crate>>> {
@@ -232,5 +242,22 @@ mod tests {
         let crate_cols = transpose_rev(v).unwrap();
 
         assert_eq!(r, crate_cols);
+    }
+
+    #[test]
+    fn transpose_rev_errorhandling_works() {
+        let v = vec![
+            vec![Some(Crate('D')), None, None],
+            vec![Some(Crate('N'))],
+            vec![Some(Crate('Z')), Some(Crate('M')), Some(Crate('P'))],
+        ];
+        let result = transpose_rev(v);
+
+        assert!(matches!(result, Err(MyError::TransposeRev(_))));
+
+        let emptyvec: Vec<Vec<Option<Crate>>> = vec![];
+        let result_empty = transpose_rev(emptyvec);
+        
+        assert!(matches!(result_empty, Err(MyError::TransposeRev(_))));
     }
 }
