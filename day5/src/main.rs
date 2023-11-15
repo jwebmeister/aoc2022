@@ -250,17 +250,17 @@ mod tests {
 
     #[test]
     fn transpose_rev_errorhandling_works() {
-        let v = vec![
+        let misdim_vec = vec![
             vec![Some(Crate('D')), None, None],
             vec![Some(Crate('N'))],
             vec![Some(Crate('Z')), Some(Crate('M')), Some(Crate('P'))],
         ];
-        let result = transpose_rev(v);
+        let result_misdim = transpose_rev(misdim_vec);
 
-        assert!(matches!(result, Err(MyError::TransposeRev(_))));
+        assert!(matches!(result_misdim, Err(MyError::TransposeRev(_))));
 
-        let emptyvec: Vec<Vec<Option<Crate>>> = vec![];
-        let result_empty = transpose_rev(emptyvec);
+        let empty_vec: Vec<Vec<Option<Crate>>> = vec![];
+        let result_empty = transpose_rev(empty_vec);
 
         assert!(matches!(result_empty, Err(MyError::TransposeRev(_))));
     }
