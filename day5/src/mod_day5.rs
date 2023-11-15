@@ -31,6 +31,43 @@ impl<T> From<nom::error::Error<T>> for MyError {
     }
 }
 
+pub fn exec_moves_part2(crate_columns: &mut Vec<Vec<Crate>>, moves: &mut Vec<MoveQtyFromTo>) {
+    moves.reverse();
+
+    while let Some(m) = moves.pop() {
+        let mut temp_stack = vec![];
+        (0..m.0).for_each(|_| {
+            if let Some(maybe_c) = crate_columns[(m.1 - 1) as usize].pop() {
+                temp_stack.push(maybe_c)
+            };
+        });
+        temp_stack.reverse();
+        crate_columns[(m.2 - 1) as usize].append(&mut temp_stack);
+    }
+}
+
+pub fn exec_moves_part1(crate_columns: &mut Vec<Vec<Crate>>, moves: &mut Vec<MoveQtyFromTo>) {
+    moves.reverse();
+
+    while let Some(m) = moves.pop() {
+        (0..m.0).for_each(|_| {
+            if let Some(maybe_c) = crate_columns[(m.1 - 1) as usize].pop() {
+                crate_columns[(m.2 - 1) as usize].push(maybe_c)
+            };
+        });
+    }
+}
+
+pub fn top_of_crate_columns(crate_columns: Vec<Vec<Crate>>) -> String {
+    let mut top_c = String::new();
+    for v in &crate_columns {
+        if let Some(maybe_c) = v.last() {
+            top_c.push(maybe_c.0);
+        }
+    }
+    top_c
+}
+
 pub fn parse_move_all_lines(
     buffer: &str,
     skip_lines: usize,
@@ -79,7 +116,7 @@ fn parse_move_line(i: &str) -> nom::IResult<&str, MoveQtyFromTo> {
 }
 
 pub fn parse_crate_all_columns(buffer: &str) -> Result<Vec<Vec<Crate>>, MyError> {
-    let crate_lines = parse_crate_all_lines(&buffer)?;
+    let crate_lines = parse_crate_all_lines(buffer)?;
     transpose_rev(crate_lines)
 }
 
@@ -91,7 +128,7 @@ fn transpose_rev<T>(v: Vec<Vec<Option<T>>>) -> Result<Vec<Vec<T>>, MyError> {
     };
 
     let len = v[0].len();
-    if len <= 0 {
+    if len == 0 {
         return Err(MyError::TransposeRevErr(
             "interior Vec is empty".to_string(),
         ));
@@ -173,7 +210,7 @@ fn parse_crate_or_hole(i: &str) -> nom::IResult<&str, Option<Crate>> {
 
 fn parse_crate(i: &str) -> nom::IResult<&str, Crate> {
     let first_char = |s: &str| -> Result<Crate, nom::error::Error<&str>> {
-        let c = s.chars().next().ok_or_else(|| nom::error::Error {
+        let c = s.chars().next().ok_or(nom::error::Error {
             input: "",
             code: nom::error::ErrorKind::MapRes,
         })?;
@@ -207,8 +244,8 @@ mod tests {
     fn parse_hole_works() {
         let s = "   ";
         let result = parse_hole(s);
-        let hole = result.unwrap().1;
-        assert_eq!((), hole);
+        let remaining_text = result.unwrap().0;
+        assert_eq!("", remaining_text);
     }
 
     #[test]
@@ -324,5 +361,55 @@ mod tests {
         let v_move = parse_move_all_lines(s, 0).unwrap();
 
         assert_eq!(v_move, r);
+    }
+
+    #[test]
+    fn exec_moves_part1_works() {
+        let s = "\
+         \x20   [D]    \n\
+            [N] [C]    \n\
+            [Z] [M] [P]\n \
+            1   2   3 \n\
+            \n\
+            move 1 from 2 to 1\n\
+            move 3 from 1 to 3\n\
+            move 2 from 2 to 1\n\
+            move 1 from 1 to 2\n\
+            ";
+
+        let mut crate_columns = parse_crate_all_columns(&s).unwrap();
+        let max_vlen = crate_columns.iter().map(|v| v.len()).max().unwrap();
+        let mut moves = parse_move_all_lines(&s, max_vlen + 2).unwrap();
+
+        exec_moves_part1(&mut crate_columns, &mut moves);
+
+        let top_c = top_of_crate_columns(crate_columns);
+
+        assert_eq!(top_c, "CMZ");
+    }
+
+    #[test]
+    fn exec_moves_part2_works() {
+        let s = "\
+         \x20   [D]    \n\
+            [N] [C]    \n\
+            [Z] [M] [P]\n \
+            1   2   3 \n\
+            \n\
+            move 1 from 2 to 1\n\
+            move 3 from 1 to 3\n\
+            move 2 from 2 to 1\n\
+            move 1 from 1 to 2\n\
+            ";
+
+        let mut crate_columns = parse_crate_all_columns(&s).unwrap();
+        let max_vlen = crate_columns.iter().map(|v| v.len()).max().unwrap();
+        let mut moves = parse_move_all_lines(&s, max_vlen + 2).unwrap();
+
+        exec_moves_part2(&mut crate_columns, &mut moves);
+
+        let top_c = top_of_crate_columns(crate_columns);
+
+        assert_eq!(top_c, "MCD");
     }
 }

@@ -8,6 +8,7 @@ fn main() {
     file_input.read_to_string(&mut buffer).unwrap();
 
     let mut crate_columns = mod_day5::parse_crate_all_columns(&buffer).unwrap();
+    let max_vlen = crate_columns.iter().map(|v| v.len()).max().unwrap();
 
     println!("Initial ---- ");
     for col in &crate_columns {
@@ -15,24 +16,18 @@ fn main() {
     }
     println!("End Initial ---- ");
 
-    let mut moves = mod_day5::parse_move_all_lines(&buffer, crate_columns[0].len() + 2).unwrap();
-    moves.reverse();
+    let mut moves = mod_day5::parse_move_all_lines(&buffer, max_vlen + 2).unwrap();
+    mod_day5::exec_moves_part1(&mut crate_columns, &mut moves);
+    let top_c = mod_day5::top_of_crate_columns(crate_columns);
+    println!("Part 1 top crates = {}", &top_c);
 
-    while !moves.is_empty() {
-        let m = moves.pop().unwrap();
-        (0..m.0).for_each(|_| {
-            let maybe_c = crate_columns[(m.1 - 1) as usize].pop();
-            if maybe_c.is_some() {
-                crate_columns[(m.2 - 1) as usize].push(maybe_c.unwrap())
-            };
-        });
-    }
+    let mut crate_columns = mod_day5::parse_crate_all_columns(&buffer).unwrap();
+    let max_vlen = crate_columns.iter().map(|v| v.len()).max().unwrap();
 
-    println!("Final ---- ");
-    for col in &crate_columns {
-        println!("{col:?}");
-    }
-    println!("End Final ---- ");
+    let mut moves = mod_day5::parse_move_all_lines(&buffer, max_vlen + 2).unwrap();
+    mod_day5::exec_moves_part2(&mut crate_columns, &mut moves);
+    let top_c = mod_day5::top_of_crate_columns(crate_columns);
+    println!("Part 2 top crates = {}", &top_c);
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {
