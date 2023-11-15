@@ -13,7 +13,7 @@ impl std::fmt::Debug for Crate {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct MoveQtyFromTo(u8, u8, u8);
+pub struct MoveQtyFromTo(pub u8, pub u8, pub u8);
 
 #[derive(Error, Debug)]
 pub enum MyError {

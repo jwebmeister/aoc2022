@@ -7,17 +7,32 @@ fn main() {
     let mut buffer = String::new();
     file_input.read_to_string(&mut buffer).unwrap();
 
-    let crate_columns = mod_day5::parse_crate_all_columns(&buffer).unwrap();
+    let mut crate_columns = mod_day5::parse_crate_all_columns(&buffer).unwrap();
 
+    println!("Initial ---- ");
     for col in &crate_columns {
         println!("{col:?}");
     }
+    println!("End Initial ---- ");
 
-    let moves = mod_day5::parse_move_all_lines(&buffer, crate_columns[0].len() + 2).unwrap();
+    let mut moves = mod_day5::parse_move_all_lines(&buffer, crate_columns[0].len() + 2).unwrap();
+    moves.reverse();
 
-    for m in &moves {
-        println!("{m:?}");
+    while !moves.is_empty() {
+        let m = moves.pop().unwrap();
+        (0..m.0).for_each(|_| {
+            let maybe_c = crate_columns[(m.1 - 1) as usize].pop();
+            if maybe_c.is_some() {
+                crate_columns[(m.2 - 1) as usize].push(maybe_c.unwrap())
+            };
+        });
     }
+
+    println!("Final ---- ");
+    for col in &crate_columns {
+        println!("{col:?}");
+    }
+    println!("End Final ---- ");
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {
