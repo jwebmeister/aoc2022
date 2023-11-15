@@ -42,29 +42,33 @@ fn transpose_rev<T>(v: Vec<Vec<Option<T>>>) -> Result<Vec<Vec<T>>, MyError> {
         return Err(MyError::TransposeRev("interior Vec is empty".to_string()));
     };
 
-    let mut errs = vec![];
     let mut iters: Vec<_> = v.into_iter().map(|n| n.into_iter()).collect();
-    let r = (0..len)
+    (0..len)
         .map(|_| {
             iters
                 .iter_mut()
                 .rev()
-                .filter_map(|n| match n.next() {
-                    Some(x) => x,
-                    None => {
-                        errs.push(MyError::TransposeRev(
-                            "interior Vec's have mismatching dimensions".to_string(),
-                        ));
-                        None
-                    }
+                .map(|n| match n.next() {
+                    Some(x) => Ok(x),
+                    None => Err(MyError::TransposeRev(
+                        "interior Vec's have mismatching dimensions".to_string(),
+                    )),
                 })
-                .collect::<Vec<T>>()
+                .filter(|n| match n {
+                    Ok(x) => x.is_some(),
+                    Err(_) => true,
+                })
+                .map(|n| match n {
+                    Ok(x) => x.ok_or_else(|| {
+                        MyError::TransposeRev(
+                            "did not filter `None` elements correctly".to_string(),
+                        )
+                    }),
+                    Err(e) => Err(e),
+                })
+                .collect::<Result<Vec<T>, MyError>>()
         })
-        .collect();
-    match errs.pop() {
-        Some(e) => Err(e),
-        None => Ok(r),
-    }
+        .collect()
 }
 
 fn parse_crate_all_lines(buffer: &str) -> Vec<Vec<Option<Crate>>> {
@@ -257,7 +261,7 @@ mod tests {
 
         let emptyvec: Vec<Vec<Option<Crate>>> = vec![];
         let result_empty = transpose_rev(emptyvec);
-        
+
         assert!(matches!(result_empty, Err(MyError::TransposeRev(_))));
     }
 }
