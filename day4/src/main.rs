@@ -133,12 +133,12 @@ mod tests {
 
         let mut overlaps = v.iter().map(|sa| check_complete_overlap(*sa));
 
-        assert_eq!(false, overlaps.next().unwrap());
-        assert_eq!(false, overlaps.next().unwrap());
-        assert_eq!(false, overlaps.next().unwrap());
-        assert_eq!(true, overlaps.next().unwrap());
-        assert_eq!(true, overlaps.next().unwrap());
-        assert_eq!(false, overlaps.next().unwrap());
+        assert!(!overlaps.next().unwrap());
+        assert!(!overlaps.next().unwrap());
+        assert!(!overlaps.next().unwrap());
+        assert!(overlaps.next().unwrap());
+        assert!(overlaps.next().unwrap());
+        assert!(!overlaps.next().unwrap());
     }
 
     #[test]
@@ -170,12 +170,12 @@ mod tests {
 
         let mut overlaps = v.iter().map(|sa| check_any_overlap(*sa));
 
-        assert_eq!(false, overlaps.next().unwrap());
-        assert_eq!(false, overlaps.next().unwrap());
-        assert_eq!(true, overlaps.next().unwrap());
-        assert_eq!(true, overlaps.next().unwrap());
-        assert_eq!(true, overlaps.next().unwrap());
-        assert_eq!(true, overlaps.next().unwrap());
+        assert!(!overlaps.next().unwrap());
+        assert!(!overlaps.next().unwrap());
+        assert!(overlaps.next().unwrap());
+        assert!(overlaps.next().unwrap());
+        assert!(overlaps.next().unwrap());
+        assert!(overlaps.next().unwrap());
     }
 
     #[test]

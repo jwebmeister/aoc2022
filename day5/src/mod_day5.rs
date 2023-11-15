@@ -31,7 +31,7 @@ impl<T> From<nom::error::Error<T>> for MyError {
     }
 }
 
-pub fn exec_moves_part2(crate_columns: &mut Vec<Vec<Crate>>, moves: &mut Vec<MoveQtyFromTo>) {
+pub fn exec_moves_part2(crate_columns: &mut [Vec<Crate>], moves: &mut Vec<MoveQtyFromTo>) {
     moves.reverse();
 
     while let Some(m) = moves.pop() {
@@ -46,7 +46,7 @@ pub fn exec_moves_part2(crate_columns: &mut Vec<Vec<Crate>>, moves: &mut Vec<Mov
     }
 }
 
-pub fn exec_moves_part1(crate_columns: &mut Vec<Vec<Crate>>, moves: &mut Vec<MoveQtyFromTo>) {
+pub fn exec_moves_part1(crate_columns: &mut [Vec<Crate>], moves: &mut Vec<MoveQtyFromTo>) {
     moves.reverse();
 
     while let Some(m) = moves.pop() {
@@ -377,9 +377,9 @@ mod tests {
             move 1 from 1 to 2\n\
             ";
 
-        let mut crate_columns = parse_crate_all_columns(&s).unwrap();
+        let mut crate_columns = parse_crate_all_columns(s).unwrap();
         let max_vlen = crate_columns.iter().map(|v| v.len()).max().unwrap();
-        let mut moves = parse_move_all_lines(&s, max_vlen + 2).unwrap();
+        let mut moves = parse_move_all_lines(s, max_vlen + 2).unwrap();
 
         exec_moves_part1(&mut crate_columns, &mut moves);
 
@@ -402,9 +402,9 @@ mod tests {
             move 1 from 1 to 2\n\
             ";
 
-        let mut crate_columns = parse_crate_all_columns(&s).unwrap();
+        let mut crate_columns = parse_crate_all_columns(s).unwrap();
         let max_vlen = crate_columns.iter().map(|v| v.len()).max().unwrap();
-        let mut moves = parse_move_all_lines(&s, max_vlen + 2).unwrap();
+        let mut moves = parse_move_all_lines(s, max_vlen + 2).unwrap();
 
         exec_moves_part2(&mut crate_columns, &mut moves);
 
