@@ -13,7 +13,7 @@ impl std::fmt::Debug for Crate {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-struct MoveQtyFromTo(u8, u8, u8);
+pub struct MoveQtyFromTo(u8, u8, u8);
 
 #[derive(Error, Debug)]
 pub enum MyError {
@@ -29,6 +29,23 @@ impl<T> From<nom::error::Error<T>> for MyError {
         // or even implement for both T variants.
         Self::ParseErr(err.code)
     }
+}
+
+pub fn parse_move_all_lines(
+    buffer: &str,
+    skip_lines: usize,
+) -> Result<Vec<MoveQtyFromTo>, MyError> {
+    let mut move_lines = vec![];
+    for (idx, line) in buffer.lines().enumerate() {
+        if idx < skip_lines {
+            continue;
+        };
+        match nom::combinator::all_consuming(parse_move_line)(line).finish() {
+            Ok((_rest, move_line)) => move_lines.push(move_line),
+            Err(e) => return Err(e.into()),
+        }
+    }
+    Ok(move_lines)
 }
 
 fn parse_move_line(i: &str) -> nom::IResult<&str, MoveQtyFromTo> {
@@ -293,5 +310,19 @@ mod tests {
         let move_qty_from_to = parse_move_line(s).unwrap();
 
         assert_eq!(move_qty_from_to.1, r);
+    }
+
+    #[test]
+    fn parse_move_all_lines_works() {
+        let s = "\
+        move 2 from 8 to 1\n\
+        move 4 from 9 to 8\n\
+        ";
+
+        let r = vec![MoveQtyFromTo(2, 8, 1), MoveQtyFromTo(4, 9, 8)];
+
+        let v_move = parse_move_all_lines(s, 0).unwrap();
+
+        assert_eq!(v_move, r);
     }
 }

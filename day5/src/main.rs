@@ -12,6 +12,12 @@ fn main() {
     for col in &crate_columns {
         println!("{col:?}");
     }
+
+    let moves = mod_day5::parse_move_all_lines(&buffer, crate_columns[0].len() + 2).unwrap();
+
+    for m in &moves {
+        println!("{m:?}");
+    }
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {
