@@ -35,13 +35,9 @@ pub fn exec_moves_part2(crate_columns: &mut [Vec<Crate>], moves: &mut Vec<MoveQt
     moves.reverse();
 
     while let Some(m) = moves.pop() {
-        let mut temp_stack = vec![];
-        (0..m.0).for_each(|_| {
-            if let Some(maybe_c) = crate_columns[(m.1 - 1) as usize].pop() {
-                temp_stack.push(maybe_c)
-            };
-        });
-        temp_stack.reverse();
+        let cc = &mut crate_columns[(m.1 - 1) as usize];
+        let drain_at = std::cmp::max(cc.len() - m.0 as usize, 0) as usize;
+        let mut temp_stack: Vec<_> = cc.drain(drain_at..).collect();
         crate_columns[(m.2 - 1) as usize].append(&mut temp_stack);
     }
 }
@@ -50,11 +46,11 @@ pub fn exec_moves_part1(crate_columns: &mut [Vec<Crate>], moves: &mut Vec<MoveQt
     moves.reverse();
 
     while let Some(m) = moves.pop() {
-        (0..m.0).for_each(|_| {
-            if let Some(maybe_c) = crate_columns[(m.1 - 1) as usize].pop() {
-                crate_columns[(m.2 - 1) as usize].push(maybe_c)
-            };
-        });
+        let cc = &mut crate_columns[(m.1 - 1) as usize];
+        let drain_at = std::cmp::max(cc.len() - m.0 as usize, 0) as usize;
+        let mut temp_stack: Vec<_> = cc.drain(drain_at..).collect();
+        temp_stack.reverse();
+        crate_columns[(m.2 - 1) as usize].append(&mut temp_stack);
     }
 }
 

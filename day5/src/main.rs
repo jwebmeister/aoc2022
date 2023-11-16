@@ -9,13 +9,6 @@ fn main() {
 
     let mut crate_columns = mod_day5::parse_crate_all_columns(&buffer).unwrap();
     let max_vlen = crate_columns.iter().map(|v| v.len()).max().unwrap();
-
-    println!("Initial ---- ");
-    for col in &crate_columns {
-        println!("{col:?}");
-    }
-    println!("End Initial ---- ");
-
     let mut moves = mod_day5::parse_move_all_lines(&buffer, max_vlen + 2).unwrap();
     mod_day5::exec_moves_part1(&mut crate_columns, &mut moves);
     let top_c = mod_day5::top_of_crate_columns(crate_columns);
@@ -23,7 +16,6 @@ fn main() {
 
     let mut crate_columns = mod_day5::parse_crate_all_columns(&buffer).unwrap();
     let max_vlen = crate_columns.iter().map(|v| v.len()).max().unwrap();
-
     let mut moves = mod_day5::parse_move_all_lines(&buffer, max_vlen + 2).unwrap();
     mod_day5::exec_moves_part2(&mut crate_columns, &mut moves);
     let top_c = mod_day5::top_of_crate_columns(crate_columns);
