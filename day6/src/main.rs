@@ -160,5 +160,16 @@ mod tests {
         let s = "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw".as_bytes();
         let mut reader = std::io::BufReader::new(s);
         assert_eq!(Some(11), find_marker_idx(&mut reader).unwrap());
+
+        let s = "aaaaaaaaaaaaaaaaaaaaaaaaaaa".as_bytes();
+        let mut reader = std::io::BufReader::new(s);
+        assert_eq!(None, find_marker_idx(&mut reader).unwrap());
+
+        let s = "ab".as_bytes();
+        let mut reader = std::io::BufReader::new(s);
+        assert!(matches!(
+            find_marker_idx(&mut reader),
+            Err(MyError::NotEnoughData(_))
+        ));
     }
 }
