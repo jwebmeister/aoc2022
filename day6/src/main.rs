@@ -12,17 +12,16 @@ fn main() {
 enum MyError {
     #[error("Not a lowercase character, {0}")]
     NotLowercaseChar(char),
-    #[error("Not UTF-8, {0:?}")]
-    NotUtf8(#[from] std::str::Utf8Error),
     #[error("Not enough data for a marker size, {0}")]
     NotEnoughData(usize),
 }
 
 fn find_marker_idx<R: std::io::BufRead>(reader: &mut R) -> Result<Option<usize>, MyError> {
     const MARKER_SIZE: usize = 4;
-    let mut marker_idx: usize = MARKER_SIZE;
 
+    let mut marker_idx: usize = MARKER_SIZE;
     let mut n_buf = [0_u8; MARKER_SIZE];
+
     match reader.read_exact(&mut n_buf) {
         Ok(_) => {}
         Err(_) => return Err(MyError::NotEnoughData(MARKER_SIZE)),
@@ -170,6 +169,13 @@ mod tests {
         assert!(matches!(
             find_marker_idx(&mut reader),
             Err(MyError::NotEnoughData(_))
+        ));
+
+        let s = "AAAAAAAbcdef".as_bytes();
+        let mut reader = std::io::BufReader::new(s);
+        assert!(matches!(
+            find_marker_idx(&mut reader),
+            Err(MyError::NotLowercaseChar(_))
         ));
     }
 }
