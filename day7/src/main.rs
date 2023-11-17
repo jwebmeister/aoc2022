@@ -9,8 +9,14 @@ fn main() {
     let tree = mod_day7::all_lines_into_tree(&lines).unwrap();
     let dir_sizes = mod_day7::dir_sizes(&tree).unwrap();
 
-    let sum_dir = sum_dir_sizes_part1(dir_sizes);
+    let sum_dir = sum_dir_sizes_part1(&dir_sizes);
     println!("Sum dir sizes (for dir <= 100000) = {0}", sum_dir);
+
+    let sum_part2 = mod_day7::part2(&dir_sizes).unwrap();
+    println!(
+        "Smallest dir size that frees enough space for update = {0}",
+        sum_part2
+    );
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {

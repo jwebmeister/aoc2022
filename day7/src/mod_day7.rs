@@ -75,7 +75,22 @@ pub enum Entry {
     File(u64, Utf8PathBuf<Utf8UnixEncoding>),
 }
 
-pub fn sum_dir_sizes_part1(v: Vec<(Utf8PathBuf<Utf8UnixEncoding>, u64)>) -> u64 {
+pub fn part2(v: &[(Utf8PathBuf<Utf8UnixEncoding>, u64)]) -> Option<u64> {
+    const TOTAL_AVAIL: u64 = 70000000;
+    const NEED_FREE: u64 = 30000000;
+
+    let Some(root_size) = v.iter().map(|d| d.1).max() else {
+        return None;
+    };
+
+    let goal_free = std::cmp::max(NEED_FREE - (TOTAL_AVAIL - root_size), 0);
+
+    v.iter()
+        .filter_map(|d| if d.1 >= goal_free { Some(d.1) } else { None })
+        .min()
+}
+
+pub fn sum_dir_sizes_part1(v: &[(Utf8PathBuf<Utf8UnixEncoding>, u64)]) -> u64 {
     v.iter()
         .filter_map(|ds| {
             let size = ds.1;
@@ -411,7 +426,42 @@ $ ls
         let lines = parse_all_lines(&mut reader).unwrap();
         let tree = all_lines_into_tree(&lines).unwrap();
         let dir_sizes = dir_sizes(&tree).unwrap();
-        let sum_dir = sum_dir_sizes_part1(dir_sizes);
+        let sum_dir = sum_dir_sizes_part1(&dir_sizes);
         assert_eq!(95437, sum_dir);
+    }
+
+    #[test]
+    fn part2_works() {
+        let s = "\
+$ cd /
+$ ls
+dir a
+14848514 b.txt
+8504156 c.dat
+dir d
+$ cd a
+$ ls
+dir e
+29116 f
+2557 g
+62596 h.lst
+$ cd e
+$ ls
+584 i
+$ cd ..
+$ cd ..
+$ cd d
+$ ls
+4060174 j
+8033020 d.log
+5626152 d.ext
+7214296 k\
+";
+        let mut reader = std::io::BufReader::new(s.as_bytes());
+        let lines = parse_all_lines(&mut reader).unwrap();
+        let tree = all_lines_into_tree(&lines).unwrap();
+        let dir_sizes = dir_sizes(&tree).unwrap();
+        let sum_part2 = part2(&dir_sizes).unwrap();
+        assert_eq!(24933642, sum_part2);
     }
 }
