@@ -1,7 +1,10 @@
 mod mod_day7;
 
 fn main() {
-    println!("Hello, world!");
+    let file = open_file().unwrap();
+    let mut reader = std::io::BufReader::new(file);
+    let result = mod_day7::parse_all_lines(&mut reader);
+    dbg!(result.unwrap());
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {

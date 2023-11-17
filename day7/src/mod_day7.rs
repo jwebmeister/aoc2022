@@ -45,8 +45,8 @@ impl<T> From<nom::error::Error<T>> for MyError {
     }
 }
 
-fn parse_all_lines<R: std::io::BufRead>(reader: &mut R) -> Result<Vec<Line>, MyError> {
-    let result = reader
+pub fn parse_all_lines<R: std::io::BufRead>(reader: &mut R) -> Result<Vec<Line>, MyError> {
+    reader
         .lines()
         .map(|r_line| match r_line {
             Ok(line) => match all_consuming(parse_line)(&line).finish() {
@@ -55,9 +55,7 @@ fn parse_all_lines<R: std::io::BufRead>(reader: &mut R) -> Result<Vec<Line>, MyE
             },
             Err(e) => Err(MyError::from(e)),
         })
-        .collect::<Result<Vec<_>, _>>();
-
-    result
+        .collect::<Result<Vec<_>, _>>()
 }
 
 fn parse_line(i: &str) -> IResult<&str, Line> {
