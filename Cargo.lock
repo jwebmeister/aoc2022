@@ -3,12 +3,6 @@
 version = 3
 
 [[package]]
-name = "camino"
-version = "1.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c59e92b5a388f549b863a7bea62612c09f24c8393560709a54558a9abdfb3b9c"
-
-[[package]]
 name = "day1"
 version = "0.1.0"
 
@@ -49,10 +43,10 @@ dependencies = [
 name = "day7"
 version = "0.1.0"
 dependencies = [
- "camino",
  "indextree",
  "nom",
  "thiserror",
+ "typed-path",
 ]
 
 [[package]]
@@ -146,6 +140,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "typed-path"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a90726108dab678edab76459751e1cc7c597c3484a6384d6423191255fa641b"
 
 [[package]]
 name = "unicode-ident"

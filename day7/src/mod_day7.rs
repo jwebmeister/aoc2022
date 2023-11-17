@@ -1,4 +1,3 @@
-use camino::Utf8PathBuf;
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -10,17 +9,18 @@ use nom::{
 };
 use std::io::prelude::*;
 use thiserror::Error;
+use typed_path::{Utf8PathBuf, Utf8UnixEncoding};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     Ls,
-    Cd(Utf8PathBuf),
+    Cd(Utf8PathBuf<Utf8UnixEncoding>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Entry {
-    Dir(Utf8PathBuf),
-    File(u64, Utf8PathBuf),
+    Dir(Utf8PathBuf<Utf8UnixEncoding>),
+    File(u64, Utf8PathBuf<Utf8UnixEncoding>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -30,9 +30,31 @@ pub enum Line {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct FsEntry {
-    path: Utf8PathBuf,
+pub struct FsEntry {
+    path: Utf8PathBuf<Utf8UnixEncoding>,
     size: u64,
+    fullpath: Utf8PathBuf<Utf8UnixEncoding>,
+}
+
+trait ArenaFsEntry {
+    fn nodeid_from_fullpath(
+        &self,
+        fullpath: &Utf8PathBuf<Utf8UnixEncoding>,
+    ) -> Option<indextree::NodeId>;
+}
+
+impl ArenaFsEntry for indextree::Arena<FsEntry> {
+    fn nodeid_from_fullpath(
+        &self,
+        fullpath: &Utf8PathBuf<Utf8UnixEncoding>,
+    ) -> Option<indextree::NodeId> {
+        for node in self.iter() {
+            if node.get().fullpath == *fullpath {
+                return self.get_node_id(node);
+            }
+        }
+        None
+    }
 }
 
 #[derive(Error, Debug)]
@@ -58,6 +80,7 @@ pub fn all_lines_into_tree(lines: &[Line]) -> Result<indextree::Arena<FsEntry>, 
     let root_node = arena.new_node(FsEntry {
         path: "/".into(),
         size: 0,
+        fullpath: Utf8PathBuf::<Utf8UnixEncoding>::from("/"),
     });
     let mut current_node = root_node;
 
@@ -81,27 +104,57 @@ pub fn all_lines_into_tree(lines: &[Line]) -> Result<indextree::Arena<FsEntry>, 
                         };
                     }
                     _ => {
-                        // Assume we only cd once into dir
-                        let node = current_node.append_value(
-                            FsEntry {
-                                path: path.clone(),
-                                size: 0,
-                            },
-                            &mut arena,
-                        );
-                        current_node = node;
+                        let Some(c_node) = arena.get(current_node) else {
+                            return Err(MyError::IndexTreeErr("Unable to get current node".into()));
+                        };
+                        let new_fullpath = c_node.get().fullpath.join(path);
+                        match arena.nodeid_from_fullpath(&new_fullpath) {
+                            Some(existing_node) => {
+                                current_node = existing_node;
+                            }
+                            None => {
+                                let node = current_node.append_value(
+                                    FsEntry {
+                                        path: path.clone(),
+                                        size: 0,
+                                        fullpath: new_fullpath,
+                                    },
+                                    &mut arena,
+                                );
+                                current_node = node;
+                            }
+                        };
                     }
                 },
             },
             Line::Entry(entry) => match entry {
-                Entry::Dir(_) => {
-                    // Assume we cd into every dir once
+                Entry::Dir(path) => {
+                    let Some(c_node) = arena.get(current_node) else {
+                        return Err(MyError::IndexTreeErr("Unable to get current node".into()));
+                    };
+                    let new_fullpath = c_node.get().fullpath.join(path);
+                    if arena.nodeid_from_fullpath(&new_fullpath).is_some() {
+                        continue;
+                    };
+                    let _node = current_node.append_value(
+                        FsEntry {
+                            path: path.clone(),
+                            size: 0,
+                            fullpath: new_fullpath,
+                        },
+                        &mut arena,
+                    );
                 }
                 Entry::File(size, path) => {
+                    let Some(c_node) = arena.get(current_node) else {
+                        return Err(MyError::IndexTreeErr("Unable to get current node".into()));
+                    };
+                    let new_fullpath = c_node.get().fullpath.join(path);
                     let _node = current_node.append_value(
                         FsEntry {
                             path: path.clone(),
                             size: *size,
+                            fullpath: new_fullpath,
                         },
                         &mut arena,
                     );
@@ -161,7 +214,7 @@ fn parse_cd(i: &str) -> IResult<&str, Command> {
     map(preceded(tag("cd "), parse_path), Command::Cd)(i)
 }
 
-fn parse_path(i: &str) -> IResult<&str, Utf8PathBuf> {
+fn parse_path(i: &str) -> IResult<&str, Utf8PathBuf<Utf8UnixEncoding>> {
     map(
         take_while1(|c: char| "abcdefghijklmnopqrstuvwxyz./".contains(c)),
         Into::into,
