@@ -29,12 +29,20 @@ pub enum Line {
     Entry(Entry),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct FsEntry {
+    path: Utf8PathBuf,
+    size: u64,
+}
+
 #[derive(Error, Debug)]
 pub enum MyError {
     #[error("parsing error, {0:?}")]
     ParseErr(nom::error::ErrorKind),
     #[error(transparent)]
     IoErr(#[from] std::io::Error),
+    #[error("IndexTree error, {0:?}")]
+    IndexTreeErr(String),
 }
 
 impl<T> From<nom::error::Error<T>> for MyError {
@@ -43,6 +51,66 @@ impl<T> From<nom::error::Error<T>> for MyError {
         // or even implement for both T variants.
         Self::ParseErr(err.code)
     }
+}
+
+pub fn all_lines_into_tree(lines: &[Line]) -> Result<indextree::Arena<FsEntry>, MyError> {
+    let mut arena = indextree::Arena::<FsEntry>::new();
+    let root_node = arena.new_node(FsEntry {
+        path: "/".into(),
+        size: 0,
+    });
+    let mut current_node = root_node;
+
+    for line in lines {
+        match line {
+            Line::Command(cmd) => match cmd {
+                Command::Ls => {}
+                Command::Cd(path) => match path.as_str() {
+                    "/" => {}
+                    ".." => {
+                        let Some(c_node) = arena.get(current_node) else {
+                            return Err(MyError::IndexTreeErr("Unable to get current node".into()));
+                        };
+                        match c_node.parent() {
+                            Some(p) => current_node = p,
+                            None => {
+                                return Err(MyError::IndexTreeErr(
+                                    "Unable to get current nodes parent".into(),
+                                ))
+                            }
+                        };
+                    }
+                    _ => {
+                        // Assume we only cd once into dir
+                        let node = current_node.append_value(
+                            FsEntry {
+                                path: path.clone(),
+                                size: 0,
+                            },
+                            &mut arena,
+                        );
+                        current_node = node;
+                    }
+                },
+            },
+            Line::Entry(entry) => match entry {
+                Entry::Dir(_) => {
+                    // Assume we cd into every dir once
+                }
+                Entry::File(size, path) => {
+                    let _node = current_node.append_value(
+                        FsEntry {
+                            path: path.clone(),
+                            size: *size,
+                        },
+                        &mut arena,
+                    );
+                }
+            },
+        }
+    }
+
+    Ok(arena)
 }
 
 pub fn parse_all_lines<R: std::io::BufRead>(reader: &mut R) -> Result<Vec<Line>, MyError> {
@@ -180,5 +248,22 @@ mod tests {
         let mut reader = std::io::BufReader::new(s.as_bytes());
         let result = parse_all_lines(&mut reader);
         assert_eq!(r, result.unwrap());
+    }
+
+    #[test]
+    fn all_lines_into_tree_works() {
+        let lines = vec![
+            Line::Command(Command::Cd("/".into())),
+            Line::Command(Command::Ls),
+            Line::Entry(Entry::Dir("a".into())),
+            Line::Entry(Entry::File(14848514, "r1.txt".into())),
+            Line::Command(Command::Cd("a".into())),
+            Line::Command(Command::Ls),
+            Line::Entry(Entry::File(100, "a1.txt".into())),
+            Line::Command(Command::Cd("..".into())),
+        ];
+
+        let result = all_lines_into_tree(&lines).unwrap();
+        dbg!(result);
     }
 }
