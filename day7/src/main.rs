@@ -1,10 +1,16 @@
+use crate::mod_day7::sum_dir_sizes_part1;
+
 mod mod_day7;
 
 fn main() {
     let file = open_file().unwrap();
     let mut reader = std::io::BufReader::new(file);
-    let result = mod_day7::parse_all_lines(&mut reader);
-    dbg!(result.unwrap());
+    let lines = mod_day7::parse_all_lines(&mut reader).unwrap();
+    let tree = mod_day7::all_lines_into_tree(&lines).unwrap();
+    let dir_sizes = mod_day7::dir_sizes(&tree).unwrap();
+
+    let sum_dir = sum_dir_sizes_part1(dir_sizes);
+    println!("Sum dir sizes (for dir <= 100000) = {0}", sum_dir);
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {

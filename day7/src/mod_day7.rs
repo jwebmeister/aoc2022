@@ -12,24 +12,6 @@ use thiserror::Error;
 use typed_path::{Utf8PathBuf, Utf8UnixEncoding};
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Command {
-    Ls,
-    Cd(Utf8PathBuf<Utf8UnixEncoding>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Entry {
-    Dir(Utf8PathBuf<Utf8UnixEncoding>),
-    File(u64, Utf8PathBuf<Utf8UnixEncoding>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Line {
-    Command(Command),
-    Entry(Entry),
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct FsEntry {
     path: Utf8PathBuf<Utf8UnixEncoding>,
     size: u64,
@@ -60,19 +42,70 @@ impl ArenaFsEntry for indextree::Arena<FsEntry> {
 #[derive(Error, Debug)]
 pub enum MyError {
     #[error("parsing error, {0:?}")]
-    ParseErr(nom::error::ErrorKind),
+    Parser(nom::error::ErrorKind),
     #[error(transparent)]
-    IoErr(#[from] std::io::Error),
+    Io(#[from] std::io::Error),
     #[error("IndexTree error, {0:?}")]
-    IndexTreeErr(String),
+    IndexTree(String),
 }
 
 impl<T> From<nom::error::Error<T>> for MyError {
     fn from(err: nom::error::Error<T>) -> Self {
         // Get details from the error you want,
         // or even implement for both T variants.
-        Self::ParseErr(err.code)
+        Self::Parser(err.code)
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Line {
+    Command(Command),
+    Entry(Entry),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Command {
+    Ls,
+    Cd(Utf8PathBuf<Utf8UnixEncoding>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Entry {
+    Dir(Utf8PathBuf<Utf8UnixEncoding>),
+    File(u64, Utf8PathBuf<Utf8UnixEncoding>),
+}
+
+pub fn sum_dir_sizes_part1(v: Vec<(Utf8PathBuf<Utf8UnixEncoding>, u64)>) -> u64 {
+    v.iter()
+        .filter_map(|ds| {
+            let size = ds.1;
+            match size <= 100000 {
+                true => Some(size),
+                false => None,
+            }
+        })
+        .sum::<u64>()
+}
+
+pub fn dir_sizes(
+    arena: &indextree::Arena<FsEntry>,
+) -> Result<Vec<(Utf8PathBuf<Utf8UnixEncoding>, u64)>, MyError> {
+    let mut v: Vec<(Utf8PathBuf<Utf8UnixEncoding>, u64)> = vec![];
+    for node in arena.iter() {
+        let fs = node.get();
+        if fs.size == 0 {
+            let Some(node_id) = arena.get_node_id(node) else {
+                return Err(MyError::IndexTree("Unable to get current node".into()));
+            };
+            let sum = node_id
+                .descendants(arena)
+                .filter_map(|d_id| arena.get(d_id))
+                .map(|d_node: &indextree::Node<FsEntry>| d_node.get().size)
+                .sum::<u64>();
+            v.push((fs.fullpath.clone(), sum));
+        }
+    }
+    Ok(v)
 }
 
 pub fn all_lines_into_tree(lines: &[Line]) -> Result<indextree::Arena<FsEntry>, MyError> {
@@ -92,12 +125,12 @@ pub fn all_lines_into_tree(lines: &[Line]) -> Result<indextree::Arena<FsEntry>, 
                     "/" => {}
                     ".." => {
                         let Some(c_node) = arena.get(current_node) else {
-                            return Err(MyError::IndexTreeErr("Unable to get current node".into()));
+                            return Err(MyError::IndexTree("Unable to get current node".into()));
                         };
                         match c_node.parent() {
                             Some(p) => current_node = p,
                             None => {
-                                return Err(MyError::IndexTreeErr(
+                                return Err(MyError::IndexTree(
                                     "Unable to get current nodes parent".into(),
                                 ))
                             }
@@ -105,7 +138,7 @@ pub fn all_lines_into_tree(lines: &[Line]) -> Result<indextree::Arena<FsEntry>, 
                     }
                     _ => {
                         let Some(c_node) = arena.get(current_node) else {
-                            return Err(MyError::IndexTreeErr("Unable to get current node".into()));
+                            return Err(MyError::IndexTree("Unable to get current node".into()));
                         };
                         let new_fullpath = c_node.get().fullpath.join(path);
                         match arena.nodeid_from_fullpath(&new_fullpath) {
@@ -130,7 +163,7 @@ pub fn all_lines_into_tree(lines: &[Line]) -> Result<indextree::Arena<FsEntry>, 
             Line::Entry(entry) => match entry {
                 Entry::Dir(path) => {
                     let Some(c_node) = arena.get(current_node) else {
-                        return Err(MyError::IndexTreeErr("Unable to get current node".into()));
+                        return Err(MyError::IndexTree("Unable to get current node".into()));
                     };
                     let new_fullpath = c_node.get().fullpath.join(path);
                     if arena.nodeid_from_fullpath(&new_fullpath).is_some() {
@@ -147,9 +180,12 @@ pub fn all_lines_into_tree(lines: &[Line]) -> Result<indextree::Arena<FsEntry>, 
                 }
                 Entry::File(size, path) => {
                     let Some(c_node) = arena.get(current_node) else {
-                        return Err(MyError::IndexTreeErr("Unable to get current node".into()));
+                        return Err(MyError::IndexTree("Unable to get current node".into()));
                     };
                     let new_fullpath = c_node.get().fullpath.join(path);
+                    if arena.nodeid_from_fullpath(&new_fullpath).is_some() {
+                        continue;
+                    };
                     let _node = current_node.append_value(
                         FsEntry {
                             path: path.clone(),
@@ -316,7 +352,66 @@ mod tests {
             Line::Command(Command::Cd("..".into())),
         ];
 
-        let result = all_lines_into_tree(&lines).unwrap();
-        dbg!(result);
+        let result = all_lines_into_tree(&lines);
+        assert!(result.is_ok());
+        dbg!(result.unwrap());
+    }
+
+    #[test]
+    fn dir_sizes_works() {
+        let lines = vec![
+            Line::Command(Command::Cd("/".into())),
+            Line::Command(Command::Ls),
+            Line::Entry(Entry::Dir("a".into())),
+            Line::Entry(Entry::File(14848514, "r1.txt".into())),
+            Line::Command(Command::Cd("a".into())),
+            Line::Command(Command::Ls),
+            Line::Entry(Entry::File(100, "a1.txt".into())),
+        ];
+
+        let r = vec![
+            (Utf8PathBuf::<Utf8UnixEncoding>::from("/"), 14848614),
+            (Utf8PathBuf::<Utf8UnixEncoding>::from("/a"), 100),
+        ];
+
+        let arena = all_lines_into_tree(&lines).unwrap();
+        let dir_sizes = dir_sizes(&arena).unwrap();
+
+        assert_eq!(r, dir_sizes);
+    }
+
+    #[test]
+    fn sum_dir_sizes_part1_works() {
+        let s = "\
+$ cd /
+$ ls
+dir a
+14848514 b.txt
+8504156 c.dat
+dir d
+$ cd a
+$ ls
+dir e
+29116 f
+2557 g
+62596 h.lst
+$ cd e
+$ ls
+584 i
+$ cd ..
+$ cd ..
+$ cd d
+$ ls
+4060174 j
+8033020 d.log
+5626152 d.ext
+7214296 k\
+";
+        let mut reader = std::io::BufReader::new(s.as_bytes());
+        let lines = parse_all_lines(&mut reader).unwrap();
+        let tree = all_lines_into_tree(&lines).unwrap();
+        let dir_sizes = dir_sizes(&tree).unwrap();
+        let sum_dir = sum_dir_sizes_part1(dir_sizes);
+        assert_eq!(95437, sum_dir);
     }
 }
