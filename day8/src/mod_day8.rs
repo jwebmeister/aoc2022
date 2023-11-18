@@ -7,6 +7,44 @@ pub enum MyError {
     RowParse(usize),
     #[error(transparent)]
     Io(#[from] std::io::Error),
+    #[error(transparent)]
+    Ndarray(#[from] ndarray::ShapeError),
+}
+
+pub fn read_into_matrix<R: std::io::BufRead>(
+    reader: &mut R,
+) -> Result<ndarray::Array2<u8>, MyError> {
+    let mut first_s = String::new();
+    let _ = reader.read_line(&mut first_s);
+
+    let mut data = first_s
+        .chars()
+        .filter_map(|c| c.to_digit(10))
+        .map(|n| n as u8)
+        .collect::<Vec<_>>();
+
+    let mut row_count: usize = 1;
+    let col_count: usize = data.len();
+
+    for (row_idx, line) in reader.lines().enumerate() {
+        let s = line?;
+        let mut v = s
+            .chars()
+            .filter_map(|c| c.to_digit(10))
+            .map(|n| n as u8)
+            .collect::<Vec<_>>();
+        if v.len() > 0 && v.len() != col_count {
+            return Err(MyError::RowParse(row_idx));
+        }
+        if v.len() != col_count {
+            break;
+        }
+        row_count += 1;
+        data.append(&mut v);
+    }
+
+    let arr = ndarray::Array2::from_shape_vec((row_count, col_count), data)?;
+    Ok(arr)
 }
 
 pub fn visible_any_side<R: std::io::Read + std::io::Seek>(
@@ -177,5 +215,23 @@ mod tests {
 
         assert!(diff1.is_empty());
         assert!(diff2.is_empty());
+    }
+
+    #[test]
+    fn read_into_matrix_works() {
+        let s = "30373
+25512
+65332
+33549
+35390";
+        let a: Vec<u8> = vec![
+            3, 0, 3, 7, 3, 2, 5, 5, 1, 2, 6, 5, 3, 3, 2, 3, 3, 5, 4, 9, 3, 5, 3, 9, 0,
+        ];
+        let r = ndarray::Array2::from_shape_vec((5, 5), a).unwrap();
+
+        let mut reader = std::io::BufReader::new(s.as_bytes());
+        let matrix = read_into_matrix(&mut reader).unwrap();
+
+        assert_eq!(r, matrix);
     }
 }

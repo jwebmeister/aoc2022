@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 rev_buf_reader = "0.3"
 thiserror = "1.0"
+ndarray = "0.15"
