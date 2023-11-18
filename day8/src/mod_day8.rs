@@ -99,6 +99,8 @@ pub fn read_into_matrix<R: std::io::BufRead>(
     let mut row_count: usize = 1;
     let col_count: usize = data.len();
 
+    data.reserve_exact(col_count * (col_count - 1));
+
     for (row_idx, line) in reader.lines().enumerate() {
         let s = line?;
         let mut v = s
