@@ -1,5 +1,9 @@
+mod mod_day8;
+
 fn main() {
-    println!("Hello, world!");
+    let file = open_file().unwrap();
+    let part1 = mod_day8::visible_any_side(file).unwrap();
+    println!("Trees visible from any side = {0}", part1.len());
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {

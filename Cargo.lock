@@ -52,6 +52,10 @@ dependencies = [
 [[package]]
 name = "day8"
 version = "0.1.0"
+dependencies = [
+ "rev_buf_reader",
+ "thiserror",
+]
 
 [[package]]
 name = "either"
@@ -112,6 +116,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5267fca4496028628a95160fc423a33e8b2e6af8a5302579e322e4b520293cae"
 dependencies = [
  "proc-macro2",
+]
+
+[[package]]
+name = "rev_buf_reader"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c0f2e47e00e29920959826e2e1784728a3780d1a784247be5257258cc75f910"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]
