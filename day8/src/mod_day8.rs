@@ -1,3 +1,4 @@
+use ndarray::s;
 use std::{collections::HashSet, io::prelude::*};
 use thiserror::Error;
 
@@ -9,6 +10,78 @@ pub enum MyError {
     Io(#[from] std::io::Error),
     #[error(transparent)]
     Ndarray(#[from] ndarray::ShapeError),
+}
+
+pub fn highest_score(matrix: ndarray::Array2<u8>) -> usize {
+    let mut highest_score: usize = 0;
+
+    for (idx, el) in matrix.indexed_iter() {
+        if idx.0 == 0 || idx.0 == matrix.nrows() - 1 || idx.1 == 0 || idx.1 == matrix.ncols() - 1 {
+            continue;
+        }
+        let mut up_found = false;
+        let up: usize = matrix
+            .slice(s![..idx.0; -1, idx.1])
+            .iter()
+            .fold(0, |acc, x| {
+                if !up_found {
+                    if *x >= *el {
+                        up_found = true;
+                    };
+                    acc + 1
+                } else {
+                    acc
+                }
+            });
+        let mut down_found = false;
+        let down: usize = matrix
+            .slice(s![idx.0 + 1..; 1, idx.1])
+            .iter()
+            .fold(0, |acc, x| {
+                if !down_found {
+                    if *x >= *el {
+                        down_found = true;
+                    };
+                    acc + 1
+                } else {
+                    acc
+                }
+            });
+        let mut left_found = false;
+        let left: usize = matrix
+            .slice(s![idx.0, ..idx.1; -1])
+            .iter()
+            .fold(0, |acc, x| {
+                if !left_found {
+                    if *x >= *el {
+                        left_found = true;
+                    };
+                    acc + 1
+                } else {
+                    acc
+                }
+            });
+        let mut right_found = false;
+        let right: usize = matrix
+            .slice(s![idx.0, idx.1 + 1..; 1])
+            .iter()
+            .fold(0, |acc, x| {
+                if !right_found {
+                    if *x >= *el {
+                        right_found = true;
+                    };
+                    acc + 1
+                } else {
+                    acc
+                }
+            });
+        let product = up * down * left * right;
+        if product >= highest_score {
+            highest_score = product;
+        };
+    }
+
+    highest_score
 }
 
 pub fn read_into_matrix<R: std::io::BufRead>(
@@ -33,7 +106,7 @@ pub fn read_into_matrix<R: std::io::BufRead>(
             .filter_map(|c| c.to_digit(10))
             .map(|n| n as u8)
             .collect::<Vec<_>>();
-        if v.len() > 0 && v.len() != col_count {
+        if !v.is_empty() && v.len() != col_count {
             return Err(MyError::RowParse(row_idx));
         }
         if v.len() != col_count {
@@ -233,5 +306,17 @@ mod tests {
         let matrix = read_into_matrix(&mut reader).unwrap();
 
         assert_eq!(r, matrix);
+    }
+
+    #[test]
+    fn highest_score_works() {
+        let a: Vec<u8> = vec![
+            3, 0, 3, 7, 3, 2, 5, 5, 1, 2, 6, 5, 3, 3, 2, 3, 3, 5, 4, 9, 3, 5, 3, 9, 0,
+        ];
+        let matrix = ndarray::Array2::from_shape_vec((5, 5), a).unwrap();
+
+        let highest_score = highest_score(matrix);
+
+        assert_eq!(8, highest_score);
     }
 }

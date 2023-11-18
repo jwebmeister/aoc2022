@@ -4,6 +4,12 @@ fn main() {
     let file = open_file().unwrap();
     let part1 = mod_day8::visible_any_side(file).unwrap();
     println!("Trees visible from any side = {0}", part1.len());
+
+    let file = open_file().unwrap();
+    let mut reader = std::io::BufReader::new(file);
+    let matrix = mod_day8::read_into_matrix(&mut reader).unwrap();
+    let part2 = mod_day8::highest_score(matrix);
+    println!("Highest score = {0}", part2);
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {
