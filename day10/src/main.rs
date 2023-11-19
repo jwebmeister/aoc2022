@@ -3,7 +3,7 @@ mod mod_day10;
 fn main() {
     let file = open_file().unwrap();
     let mut reader = std::io::BufReader::new(file);
-    let v = mod_day10::lines_to_signal_strength(&mut reader).unwrap();
+    let (v, crt) = mod_day10::lines_to_result(&mut reader).unwrap();
     let part1 = v.iter().sum::<i32>();
     println!("Part 1 = {}", part1);
 }

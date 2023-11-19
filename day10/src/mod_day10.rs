@@ -8,6 +8,27 @@ use nom::{
 use std::{collections::VecDeque, io::prelude::*};
 use thiserror::Error;
 
+const CRT_WIDTH: usize = 40;
+const CRT_HEIGHT: usize = 6;
+
+pub struct Crt([i32; CRT_WIDTH * CRT_HEIGHT]);
+
+impl std::fmt::Debug for Crt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "")?;
+        for row in 0..CRT_HEIGHT {
+            let idx_start = row * CRT_WIDTH;
+            let idx_end = (row + 1) * CRT_WIDTH;
+            let line = self.0[idx_start..idx_end]
+                .iter()
+                .map(|n| if *n >= 1 { "#" } else { "." })
+                .collect::<String>();
+            writeln!(f, "{}", line)?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, PartialEq)]
 pub enum Command {
     Noop,
@@ -37,8 +58,11 @@ impl<T> From<nom::error::Error<T>> for MyError {
     }
 }
 
-pub fn lines_to_signal_strength<R: std::io::BufRead>(reader: &mut R) -> Result<Vec<i32>, MyError> {
+pub fn lines_to_result<R: std::io::BufRead>(
+    reader: &mut R,
+) -> Result<(Vec<i32>, Crt), MyError> {
     let mut v: Vec<i32> = Vec::new();
+    let mut crt = [0; CRT_WIDTH * CRT_HEIGHT];
     let mut cycle: i32 = 0;
     let mut x: i32 = 1;
     for line in reader.lines() {
@@ -50,17 +74,25 @@ pub fn lines_to_signal_strength<R: std::io::BufRead>(reader: &mut R) -> Result<V
                     if (cycle - 20) % 40 == 0 {
                         v.push(cycle * x);
                     };
+                    if ((x - 1)..=(x + 1)).contains(&(cycle % 40)) && (cycle as usize) < crt.len() {
+                        crt[(cycle - 1) as usize] = 1;
+                    };
                 }
                 Command::Addx(n) => {
                     cycle += 1;
                     if (cycle - 20) % 40 == 0 {
                         v.push(cycle * x);
                     };
+                    if ((x - 1)..=(x + 1)).contains(&(cycle % 40)) && (cycle as usize) < crt.len() {
+                        crt[(cycle - 1) as usize] = 1;
+                    };
                     cycle += 1;
                     if (cycle - 20) % 40 == 0 {
                         v.push(cycle * x);
                     };
-
+                    if ((x - 1)..=(x + 1)).contains(&(cycle % 40)) && (cycle as usize) < crt.len() {
+                        crt[(cycle - 1) as usize] = 1;
+                    };
                     x += n;
                 }
             },
@@ -68,7 +100,7 @@ pub fn lines_to_signal_strength<R: std::io::BufRead>(reader: &mut R) -> Result<V
         };
     }
 
-    Ok(v)
+    Ok((v, Crt(crt)))
 }
 
 pub fn parse_lines_to_commands<R: std::io::BufRead>(
@@ -105,7 +137,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn lines_to_signal_strength_works() {
+    fn lines_to_result_works() {
         let s = "addx 15
 addx -11
 addx 6
@@ -253,10 +285,20 @@ noop
 noop
 noop";
 
+        let img = 
+"##..##..##..##..##..##..##..##..##..##..
+###...###...###...###...###...###...###.
+####....####....####....####....####....
+#####.....#####.....#####.....#####.....
+######......######......######......####
+#######.......#######.......#######.....";
+
         let mut reader = std::io::BufReader::new(s.as_bytes());
 
-        let v = lines_to_signal_strength(&mut reader).unwrap();
+        let (v, crt) = lines_to_result(&mut reader).unwrap();
 
         assert_eq!(13140, v.iter().sum::<i32>());
+
+        assert_eq!(img, format!("{:?}", crt));
     }
 }
