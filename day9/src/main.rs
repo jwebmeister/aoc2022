@@ -1,10 +1,12 @@
 use std::collections::HashSet;
 use thiserror::Error;
+use std::io::prelude::*;
 
 fn main() {
     println!("Hello, world!");
 }
 
+#[derive(Debug, Clone, PartialEq)]
 struct Move {
     dir: Direction,
     qty: usize,
@@ -31,6 +33,7 @@ impl Move {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 enum Direction {
     Up,
     Down,
@@ -41,6 +44,8 @@ enum Direction {
 #[derive(Error, Debug)]
 enum MyError {
     #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
     ParseIntError(#[from] std::num::ParseIntError),
     #[error("Couldn't parse direction of steps")]
     ParseDir,
@@ -48,8 +53,13 @@ enum MyError {
     ParseQty,
 }
 
-fn tail_visits<R: std::io::BufRead>(reader: &mut R) -> HashSet<(isize, isize)> {
-    todo!()
+fn parse_moves_list<R: std::io::BufRead>(reader: &mut R) -> Result<Vec<Move>, MyError> {
+    let mut v = Vec::new();
+    for line in reader.lines() {
+        let l = line?;
+        v.push(parse_move(l)?);
+    };
+    Ok(v)
 }
 
 fn parse_move<S: Into<String>>(s: S) -> Result<Move, MyError> {
@@ -95,4 +105,110 @@ fn open_file() -> std::io::Result<std::fs::File> {
         },
     };
     Ok(file_input)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_move_works() {
+        let s = 
+"R 4
+U 4
+L 3
+D 1
+R 4
+D 1
+L 5
+R 2";
+        let v = s.lines().map(|l| parse_move(l)).collect::<Result<Vec<_>, MyError>>().unwrap();
+        let r = vec![
+            Move {
+                dir: Direction::Right,
+                qty: 4,
+            },
+            Move {
+                dir: Direction::Up,
+                qty: 4,
+            },
+            Move {
+                dir: Direction::Left,
+                qty: 3,
+            },
+            Move {
+                dir: Direction::Down,
+                qty: 1,
+            },
+            Move {
+                dir: Direction::Right,
+                qty: 4,
+            },
+            Move {
+                dir: Direction::Down,
+                qty: 1,
+            },
+            Move {
+                dir: Direction::Left,
+                qty: 5,
+            },
+            Move {
+                dir: Direction::Right,
+                qty: 2,
+            },
+        ];
+        
+        assert_eq!(r, v);
+    }
+
+    #[test]
+    fn parse_moves_list_works() {
+        let s = 
+"R 4
+U 4
+L 3
+D 1
+R 4
+D 1
+L 5
+R 2";
+        let mut reader = std::io::BufReader::new(s.as_bytes());
+        let v = parse_moves_list(&mut reader).unwrap();
+        let r = vec![
+            Move {
+                dir: Direction::Right,
+                qty: 4,
+            },
+            Move {
+                dir: Direction::Up,
+                qty: 4,
+            },
+            Move {
+                dir: Direction::Left,
+                qty: 3,
+            },
+            Move {
+                dir: Direction::Down,
+                qty: 1,
+            },
+            Move {
+                dir: Direction::Right,
+                qty: 4,
+            },
+            Move {
+                dir: Direction::Down,
+                qty: 1,
+            },
+            Move {
+                dir: Direction::Left,
+                qty: 5,
+            },
+            Move {
+                dir: Direction::Right,
+                qty: 2,
+            },
+        ];
+        
+        assert_eq!(r, v);
+    }
 }
