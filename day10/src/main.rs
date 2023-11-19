@@ -1,5 +1,11 @@
+mod mod_day10;
+
 fn main() {
-    println!("Hello, world!");
+    let file = open_file().unwrap();
+    let mut reader = std::io::BufReader::new(file);
+    let v = mod_day10::lines_to_signal_strength(&mut reader).unwrap();
+    let part1 = v.iter().sum::<i32>();
+    println!("Part 1 = {}", part1);
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {
