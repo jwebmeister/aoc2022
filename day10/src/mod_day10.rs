@@ -11,7 +11,7 @@ use thiserror::Error;
 const CRT_WIDTH: usize = 40;
 const CRT_HEIGHT: usize = 6;
 
-pub struct Crt([i32; CRT_WIDTH * CRT_HEIGHT]);
+pub struct Crt([bool; CRT_WIDTH * CRT_HEIGHT]);
 
 impl std::fmt::Debug for Crt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -21,7 +21,7 @@ impl std::fmt::Debug for Crt {
             let idx_end = (row + 1) * CRT_WIDTH;
             let line = self.0[idx_start..idx_end]
                 .iter()
-                .map(|n| if *n >= 1 { "#" } else { "." })
+                .map(|n| if *n { "#" } else { "." })
                 .collect::<String>();
             writeln!(f, "{}", line)?;
         }
@@ -60,7 +60,7 @@ impl<T> From<nom::error::Error<T>> for MyError {
 
 pub fn lines_to_result<R: std::io::BufRead>(reader: &mut R) -> Result<(Vec<i32>, Crt), MyError> {
     let mut v: Vec<i32> = Vec::new();
-    let mut crt = [0; CRT_WIDTH * CRT_HEIGHT];
+    let mut crt = [false; CRT_WIDTH * CRT_HEIGHT];
     let mut cycle: i32 = 1;
     let mut x: i32 = 1;
     for line in reader.lines() {
@@ -74,7 +74,7 @@ pub fn lines_to_result<R: std::io::BufRead>(reader: &mut R) -> Result<(Vec<i32>,
                     if ((x - 1)..=(x + 1)).contains(&((cycle - 1) % 40))
                         && (cycle as usize) <= crt.len()
                     {
-                        crt[(cycle - 1) as usize] = 1;
+                        crt[(cycle - 1) as usize] = true;
                     };
                     cycle += 1;
                 }
@@ -85,7 +85,7 @@ pub fn lines_to_result<R: std::io::BufRead>(reader: &mut R) -> Result<(Vec<i32>,
                     if ((x - 1)..=(x + 1)).contains(&((cycle - 1) % 40))
                         && (cycle as usize) <= crt.len()
                     {
-                        crt[(cycle - 1) as usize] = 1;
+                        crt[(cycle - 1) as usize] = true;
                     };
                     cycle += 1;
                     if (cycle - 20) % 40 == 0 {
@@ -94,7 +94,7 @@ pub fn lines_to_result<R: std::io::BufRead>(reader: &mut R) -> Result<(Vec<i32>,
                     if ((x - 1)..=(x + 1)).contains(&((cycle - 1) % 40))
                         && (cycle as usize) <= crt.len()
                     {
-                        crt[(cycle - 1) as usize] = 1;
+                        crt[(cycle - 1) as usize] = true;
                     };
                     x += n;
                     cycle += 1;
