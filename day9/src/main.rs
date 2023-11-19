@@ -2,6 +2,8 @@ use std::collections::HashSet;
 use std::io::prelude::*;
 use thiserror::Error;
 
+const NUM_ROPE_KNOTS: usize = 10;
+
 fn main() {
     let file = open_file().unwrap();
     let mut reader = std::io::BufReader::new(file);
@@ -35,14 +37,14 @@ enum Direction {
     Right,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
 struct RopeKnot {
     row: isize,
     col: isize,
 }
 
 impl RopeKnot {
-    fn to_coords(&self) -> (isize, isize) {
+    fn get_coords(&self) -> (isize, isize) {
         (self.row, self.col)
     }
 }
@@ -61,13 +63,12 @@ enum MyError {
 
 fn exec_moves_list(ml: &mut [Move]) -> HashSet<(isize, isize)> {
     let mut hs = HashSet::new();
-    let mut head = RopeKnot { row: 0, col: 0 };
-    let mut tail = RopeKnot { row: 0, col: 0 };
-    hs.insert(tail.to_coords());
+    let mut knots = [RopeKnot { row: 0, col: 0 }; NUM_ROPE_KNOTS];
+    hs.insert(knots[knots.len() - 1].get_coords());
 
     let result = ml
         .iter_mut()
-        .map(|m| exec_move(m, &mut head, &mut tail))
+        .map(|m| exec_move(m, &mut knots))
         .fold(hs, |mut acc, h| {
             acc.extend(&h);
             acc
@@ -76,12 +77,20 @@ fn exec_moves_list(ml: &mut [Move]) -> HashSet<(isize, isize)> {
     result
 }
 
-fn exec_move(m: &mut Move, head: &mut RopeKnot, tail: &mut RopeKnot) -> HashSet<(isize, isize)> {
-    let mut hs = HashSet::with_capacity(m.qty);
+fn exec_move(m: &mut Move, knots: &mut [RopeKnot]) -> HashSet<(isize, isize)> {
+    let mut hs = HashSet::with_capacity((m.qty / (knots.len() - 1)) + 1);
     while m.qty >= 1 {
         let dir_coord = m.dir_coords();
-        let head_coord = step_head(head, dir_coord);
-        let tail_coord = step_tail(tail, head_coord);
+        let _ = step_head(&mut knots[0], dir_coord);
+        let num_middle_knots = (knots.len() as isize - 2) as usize;
+        if num_middle_knots >= 1 {
+            for i in 1..(num_middle_knots + 1) {
+                let head_coord = knots[i - 1].get_coords();
+                let _ = step_tail(&mut knots[i], head_coord);
+            }
+        }
+        let head_coord = knots[knots.len() - 2].get_coords();
+        let tail_coord = step_tail(&mut knots[knots.len() - 1], head_coord);
         hs.insert(tail_coord);
         m.qty -= 1;
     }
@@ -309,6 +318,11 @@ R 2";
             },
         ];
         let hs = exec_moves_list(&mut ml);
-        assert_eq!(13, hs.len());
+
+        // when NUM_ROPE_KNOTS = 2
+        // assert_eq!(13, hs.len());
+
+        // when NUM_ROPE_KNOTS = 10
+        assert_eq!(1, hs.len());
     }
 }
