@@ -6,6 +6,7 @@ fn main() {
     let (v, crt) = mod_day10::lines_to_result(&mut reader).unwrap();
     let part1 = v.iter().sum::<i32>();
     println!("Part 1 = {}", part1);
+    println!("{:?}", crt);
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {

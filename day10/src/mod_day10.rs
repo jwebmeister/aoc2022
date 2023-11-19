@@ -15,7 +15,7 @@ pub struct Crt([i32; CRT_WIDTH * CRT_HEIGHT]);
 
 impl std::fmt::Debug for Crt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "")?;
+        writeln!(f)?;
         for row in 0..CRT_HEIGHT {
             let idx_start = row * CRT_WIDTH;
             let idx_end = (row + 1) * CRT_WIDTH;
@@ -58,42 +58,46 @@ impl<T> From<nom::error::Error<T>> for MyError {
     }
 }
 
-pub fn lines_to_result<R: std::io::BufRead>(
-    reader: &mut R,
-) -> Result<(Vec<i32>, Crt), MyError> {
+pub fn lines_to_result<R: std::io::BufRead>(reader: &mut R) -> Result<(Vec<i32>, Crt), MyError> {
     let mut v: Vec<i32> = Vec::new();
     let mut crt = [0; CRT_WIDTH * CRT_HEIGHT];
-    let mut cycle: i32 = 0;
+    let mut cycle: i32 = 1;
     let mut x: i32 = 1;
     for line in reader.lines() {
         let l = line?;
         match all_consuming(parse_command)(&l).finish() {
             Ok((_, cmd)) => match cmd {
                 Command::Noop => {
-                    cycle += 1;
                     if (cycle - 20) % 40 == 0 {
                         v.push(cycle * x);
                     };
-                    if ((x - 1)..=(x + 1)).contains(&(cycle % 40)) && (cycle as usize) < crt.len() {
+                    if ((x - 1)..=(x + 1)).contains(&((cycle - 1) % 40))
+                        && (cycle as usize) <= crt.len()
+                    {
                         crt[(cycle - 1) as usize] = 1;
                     };
+                    cycle += 1;
                 }
                 Command::Addx(n) => {
-                    cycle += 1;
                     if (cycle - 20) % 40 == 0 {
                         v.push(cycle * x);
                     };
-                    if ((x - 1)..=(x + 1)).contains(&(cycle % 40)) && (cycle as usize) < crt.len() {
+                    if ((x - 1)..=(x + 1)).contains(&((cycle - 1) % 40))
+                        && (cycle as usize) <= crt.len()
+                    {
                         crt[(cycle - 1) as usize] = 1;
                     };
                     cycle += 1;
                     if (cycle - 20) % 40 == 0 {
                         v.push(cycle * x);
                     };
-                    if ((x - 1)..=(x + 1)).contains(&(cycle % 40)) && (cycle as usize) < crt.len() {
+                    if ((x - 1)..=(x + 1)).contains(&((cycle - 1) % 40))
+                        && (cycle as usize) <= crt.len()
+                    {
                         crt[(cycle - 1) as usize] = 1;
                     };
                     x += n;
+                    cycle += 1;
                 }
             },
             Err(e) => return Err(e.into()),
@@ -103,7 +107,7 @@ pub fn lines_to_result<R: std::io::BufRead>(
     Ok((v, Crt(crt)))
 }
 
-pub fn parse_lines_to_commands<R: std::io::BufRead>(
+pub fn _parse_lines_to_commands<R: std::io::BufRead>(
     reader: &mut R,
 ) -> Result<VecDeque<Command>, MyError> {
     let mut v: VecDeque<Command> = VecDeque::new();
@@ -285,13 +289,14 @@ noop
 noop
 noop";
 
-        let img = 
-"##..##..##..##..##..##..##..##..##..##..
+        let img = "
+##..##..##..##..##..##..##..##..##..##..
 ###...###...###...###...###...###...###.
 ####....####....####....####....####....
 #####.....#####.....#####.....#####.....
 ######......######......######......####
-#######.......#######.......#######.....";
+#######.......#######.......#######.....
+";
 
         let mut reader = std::io::BufReader::new(s.as_bytes());
 
