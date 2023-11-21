@@ -9,15 +9,34 @@ use nom::{
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-struct Item(i32);
+struct Item(u32);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+struct Monkey {
+    id: u8,
+    items: Vec<Item>,
+    op: Operation,
+    div: TestDivisibleBy,
+    if_true: TestIfTrue,
+    if_false: TestIfFalse,
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+struct TestDivisibleBy(u32);
+
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+struct TestIfTrue(u8);
+
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+struct TestIfFalse(u8);
+
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 enum Operation {
     Add(Term, Term),
     Multiply(Term, Term),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Term {
     Old,
     Constant(u32),
@@ -31,7 +50,7 @@ fn parse_starting_items(i: &str) -> IResult<&str, Vec<Item>> {
     map(
         preceded(
             tag("Starting items: "),
-            separated_list0(tag(", "), nom::character::complete::i32),
+            separated_list0(tag(", "), nom::character::complete::u32),
         ),
         |v| v.into_iter().map(|x| Item(x)).collect(),
     )(i)
@@ -68,4 +87,34 @@ fn parse_term(i: &str) -> IResult<&str, Term> {
     let p_const = map(nom::character::complete::u32, |x| Term::Constant(x));
 
     alt((p_old, p_const))(i)
+}
+
+fn parse_test_divisible_by(i: &str) -> IResult<&str, TestDivisibleBy> {
+    map(
+        preceded(
+            tag("Test: divisible by "),
+            nom::character::complete::u32,
+        ),
+        |x| TestDivisibleBy(x),
+    )(i)
+}
+
+fn parse_test_if_true(i: &str) -> IResult<&str, TestIfTrue> {
+    map(
+        preceded(
+            tag("If true: throw to monkey "),
+            nom::character::complete::u8,
+        ),
+        |x| TestIfTrue(x),
+    )(i)
+}
+
+fn parse_test_if_false(i: &str) -> IResult<&str, TestIfFalse> {
+    map(
+        preceded(
+            tag("If false: throw to monkey "),
+            nom::character::complete::u8,
+        ),
+        |x| TestIfFalse(x),
+    )(i)
 }
