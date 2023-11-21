@@ -1,3 +1,5 @@
+mod mod_day11;
+
 fn main() {
     println!("Hello, world!");
 }
