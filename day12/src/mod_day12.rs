@@ -8,12 +8,40 @@ pub enum MyError {
     Io(#[from] std::io::Error),
     #[error("Row width doesn't match first row, error while parsing")]
     ParseMismatchRowWidth,
+    #[error("Invalid coordinate for grid")]
+    InvalidGridCoordinate((usize, usize)),
 }
 
-struct Bfs {
-    visited: HashMap<(usize, usize), Option<Cell>>,
+#[derive(Debug)]
+pub struct Bfs {
+    visited: HashMap<(usize, usize), Option<(usize, usize)>>,
     current: HashSet<(usize, usize)>,
-    num_steps: usize
+    num_steps: usize,
+}
+
+impl Bfs {
+    pub fn step(&mut self, grid: &Grid) {
+        if self.current.is_empty() {
+            let start_coord = grid.get_start_coord().unwrap();
+            self.current.insert(start_coord);
+            self.visited.insert(start_coord, None);
+            return;
+        };
+
+        let mut next: HashSet<(usize, usize)> = HashSet::new();
+
+        for curr in &self.current {
+            for next_coord in grid.get_available_moves(*curr).unwrap() {
+                if self.visited.contains_key(&next_coord) {
+                    continue;
+                };
+                self.visited.insert(next_coord, Some(*curr) );
+                next.insert(next_coord);
+            }
+        }
+        self.current = next;
+        self.num_steps += 1;
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -50,6 +78,48 @@ pub struct Grid {
 }
 
 impl Grid {
+    pub fn get_available_moves(
+        &self,
+        coord: (usize, usize),
+    ) -> Result<HashSet<(usize, usize)>, MyError> {
+        let irow = coord.0 as isize;
+        let icol = coord.1 as isize;
+
+        let ref_cell = self
+            .get_cell_from_coord(coord)
+            .ok_or(MyError::InvalidGridCoordinate(coord))?;
+
+        let imoves = vec![
+            (irow - 1, icol),
+            (irow + 1, icol),
+            (irow, icol - 1),
+            (irow, icol + 1),
+        ];
+
+        let umoves = imoves
+            .iter()
+            .filter(|x| {
+                !(x.0 < 0 || x.1 < 0 || x.0 >= self.height as isize || x.1 >= self.width as isize)
+            })
+            .map(|x| (x.0 as usize, x.1 as usize))
+            .filter(|x| match self.get_cell_from_coord(*x) {
+                Some(cell) => cell.elevation() <= ref_cell.elevation() + 1,
+                None => false,
+            })
+            .collect::<HashSet<(usize, usize)>>();
+
+        Ok(umoves)
+    }
+
+    pub fn is_valid_coord(&self, coord: (usize, usize)) -> bool {
+        let row = coord.0;
+        let col = coord.1;
+        let data_idx = (row * self.width) + col;
+        (0..self.height).contains(&row)
+            && (0..self.width).contains(&col)
+            && (0..self.data.len()).contains(&data_idx)
+    }
+
     pub fn get_start_data_idx(&self) -> Option<usize> {
         self.data.iter().position(|c| matches!(c, Cell::Start))
     }
@@ -66,18 +136,37 @@ impl Grid {
         self.data_idx_to_coord(self.get_end_data_idx()?)
     }
 
+    pub fn get_cell_from_coord(&self, coord: (usize, usize)) -> Option<&Cell> {
+        if !self.is_valid_coord(coord) {
+            return None;
+        };
+        let i = (coord.0 * self.width) + coord.1;
+        Some(&self.data[i])
+    }
+
+    pub fn get_mut_cell_from_coord(&mut self, coord: (usize, usize)) -> Option<&Cell> {
+        if !self.is_valid_coord(coord) {
+            return None;
+        };
+        let i = (coord.0 * self.width) + coord.1;
+        Some(&mut self.data[i])
+    }
+
     pub fn data_idx_to_coord(&self, data_idx: usize) -> Option<(usize, usize)> {
         let row = data_idx / (self.width - 1);
         let col = data_idx % self.width;
-        match (0..self.data.len()).contains(&data_idx) {
-            true => Some((row, col)),
+        let coord = (row, col);
+        match self.is_valid_coord(coord) {
+            true => Some(coord),
             false => None,
         }
     }
 
     pub fn coord_to_data_idx(&self, coord: (usize, usize)) -> Option<usize> {
-        let data_idx = (coord.0 * self.width) + coord.1;
-        match (0..self.data.len()).contains(&data_idx) {
+        let row = coord.0;
+        let col = coord.1;
+        let data_idx = (row * self.width) + col;
+        match self.is_valid_coord(coord) {
             true => Some(data_idx),
             false => None,
         }
