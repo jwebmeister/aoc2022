@@ -4,7 +4,7 @@ fn main() {
     let file = open_file().unwrap();
     let reader = std::io::BufReader::new(file);
     let mut ml = mod_day11::parse_all_monkeys(reader).unwrap();
-    while ml.round < 20 {
+    while ml.round < 10_000 {
         ml.complete_round().unwrap();
     }
     dbg!(&ml);

@@ -10,7 +10,7 @@ use nom::{
 use std::collections::VecDeque;
 use thiserror::Error;
 
-const MONKEY_GETS_BORED: bool = true;
+const MONKEY_GETS_BORED: bool = false;
 
 #[derive(Error, Debug)]
 pub enum MyError {
@@ -421,7 +421,6 @@ Monkey 3:
 
     #[test]
     fn monkey_list_complete_round_works() {
-        // test assumes const MONKEY_GETS_BORED: bool = true;
         let mut ml = MonkeyList {
             round: 0,
             data: vec![
@@ -467,25 +466,56 @@ Monkey 3:
 
         ml.set_div_product();
 
-        while ml.round < 20 {
-            ml.complete_round().unwrap();
+        if MONKEY_GETS_BORED {
+            while ml.round < 20 {
+                ml.complete_round().unwrap();
+            }
+
+            let mut iter = ml.data.iter().map(|m| m.num_items_inspected);
+
+            assert_eq!(101, iter.next().unwrap());
+            assert_eq!(95, iter.next().unwrap());
+            assert_eq!(7, iter.next().unwrap());
+            assert_eq!(105, iter.next().unwrap());
+
+            let r0_items = ml.data[0].items.iter().map(|x| x.0).collect::<Vec<_>>();
+            let r1_items = ml.data[1].items.iter().map(|x| x.0).collect::<Vec<_>>();
+            let r2_items = ml.data[2].items.iter().map(|x| x.0).collect::<Vec<_>>();
+            let r3_items = ml.data[3].items.iter().map(|x| x.0).collect::<Vec<_>>();
+
+            assert_eq!(vec![10, 12, 14, 26, 34], r0_items);
+            assert_eq!(vec![245, 93, 53, 199, 115], r1_items);
+            assert_eq!(Vec::<u64>::new(), r2_items);
+            assert_eq!(Vec::<u64>::new(), r3_items);
+
+            let mut v_num_inspected = ml
+                .data
+                .into_iter()
+                .map(|m| m.num_items_inspected)
+                .collect::<Vec<_>>();
+            v_num_inspected.sort_by(|a, b| b.cmp(a));
+            let monkey_business = v_num_inspected[0..=1]
+                .iter()
+                .map(|el| *el)
+                .reduce(|acc, el| acc * el)
+                .unwrap();
+            assert_eq!(10605, monkey_business);
+        } else {
+            while ml.round < 10_000 {
+                ml.complete_round().unwrap();
+            }
+            let mut v_num_inspected = ml
+                .data
+                .into_iter()
+                .map(|m| m.num_items_inspected)
+                .collect::<Vec<_>>();
+            v_num_inspected.sort_by(|a, b| b.cmp(a));
+            let monkey_business = v_num_inspected[0..=1]
+                .iter()
+                .map(|el| *el)
+                .reduce(|acc, el| acc * el)
+                .unwrap();
+            assert_eq!(2713310158, monkey_business);
         }
-
-        let mut iter = ml.data.iter().map(|m| m.num_items_inspected);
-
-        assert_eq!(101, iter.next().unwrap());
-        assert_eq!(95, iter.next().unwrap());
-        assert_eq!(7, iter.next().unwrap());
-        assert_eq!(105, iter.next().unwrap());
-
-        let r0_items = ml.data[0].items.iter().map(|x| x.0).collect::<Vec<_>>();
-        let r1_items = ml.data[1].items.iter().map(|x| x.0).collect::<Vec<_>>();
-        let r2_items = ml.data[2].items.iter().map(|x| x.0).collect::<Vec<_>>();
-        let r3_items = ml.data[3].items.iter().map(|x| x.0).collect::<Vec<_>>();
-
-        assert_eq!(vec![10, 12, 14, 26, 34], r0_items);
-        assert_eq!(vec![245, 93, 53, 199, 115], r1_items);
-        assert_eq!(Vec::<u64>::new(), r2_items);
-        assert_eq!(Vec::<u64>::new(), r3_items);
     }
 }
