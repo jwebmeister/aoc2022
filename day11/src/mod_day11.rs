@@ -10,6 +10,8 @@ use nom::{
 use std::collections::VecDeque;
 use thiserror::Error;
 
+const MONKEY_GETS_BORED: bool = true;
+
 #[derive(Error, Debug)]
 pub enum MyError {
     #[error("parsing error, {0:?}")]
@@ -30,12 +32,13 @@ impl<T> From<nom::error::Error<T>> for MyError {
 pub struct MonkeyList {
     pub round: usize,
     pub data: Vec<Monkey>,
+    pub div_product: u64,
 }
 
 impl MonkeyList {
     pub fn process_monkey(&mut self, id: usize) -> Result<(), MyError> {
         let monkey = &mut self.data[id as usize];
-        let to_send_items = monkey.complete_turn()?;
+        let to_send_items = monkey.complete_turn(self.div_product)?;
 
         for send_item in to_send_items {
             self.data[send_item.0 as usize].items.push_back(send_item.1);
@@ -49,6 +52,10 @@ impl MonkeyList {
         }
         self.round += 1;
         Ok(self.round)
+    }
+
+    pub fn set_div_product(&mut self) {
+        self.div_product = self.data.iter().map(|m| m.div.0).product();
     }
 }
 
@@ -70,22 +77,25 @@ pub struct Monkey {
     pub div: TestDivisibleBy,
     pub if_true: TestIfTrue,
     pub if_false: TestIfFalse,
-    pub num_items_inspected: u32,
+    pub num_items_inspected: u64,
 }
 
 impl Monkey {
-    pub fn process_one_item(&mut self) -> Result<(u8, Item), MyError> {
+    pub fn process_one_item(&mut self, div_product: u64) -> Result<(u8, Item), MyError> {
         let mut item = self.items.pop_front().ok_or(MyError::EmptyItems)?;
         item.inspect(&self.op);
-        item.bored_with();
+        if MONKEY_GETS_BORED {
+            item.bored_with();
+        };
+        item.0 %= div_product;
         let send_to = item.where_to_throw(&self.div, &self.if_true, &self.if_false);
         Ok((send_to, item))
     }
 
-    pub fn complete_turn(&mut self) -> Result<Vec<(u8, Item)>, MyError> {
+    pub fn complete_turn(&mut self, div_product: u64) -> Result<Vec<(u8, Item)>, MyError> {
         let mut v = Vec::new();
         while !self.items.is_empty() {
-            v.push(self.process_one_item()?);
+            v.push(self.process_one_item(div_product)?);
             self.num_items_inspected += 1;
         }
         Ok(v)
@@ -104,7 +114,7 @@ impl std::fmt::Debug for Monkey {
 }
 
 #[derive(Clone, PartialEq, PartialOrd)]
-pub struct Item(u32);
+pub struct Item(u64);
 
 impl Item {
     pub fn inspect(&mut self, op: &Operation) {
@@ -140,7 +150,7 @@ impl std::fmt::Debug for Item {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct TestDivisibleBy(u32);
+pub struct TestDivisibleBy(u64);
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TestIfTrue(u8);
@@ -155,7 +165,7 @@ pub enum Operation {
 }
 
 impl Operation {
-    pub fn eval(&self, old: u32) -> u32 {
+    pub fn eval(&self, old: u64) -> u64 {
         match self {
             Operation::Add(a, b) => a.eval(old) + b.eval(old),
             Operation::Multiply(a, b) => a.eval(old) * b.eval(old),
@@ -166,11 +176,11 @@ impl Operation {
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Term {
     Old,
-    Constant(u32),
+    Constant(u64),
 }
 
 impl Term {
-    pub fn eval(&self, old: u32) -> u32 {
+    pub fn eval(&self, old: u64) -> u64 {
         match &self {
             Term::Old => old,
             Term::Constant(x) => *x,
@@ -192,7 +202,13 @@ pub fn parse_all_monkeys<R: std::io::BufRead>(mut reader: R) -> Result<MonkeyLis
             Err(_) => break,
         }
     }
-    Ok(MonkeyList { round: 0, data: v })
+    let mut ml = MonkeyList {
+        round: 0,
+        data: v,
+        div_product: 0,
+    };
+    ml.set_div_product();
+    Ok(ml)
 }
 
 fn parse_monkey<R: std::io::BufRead>(reader: &mut R) -> Result<Monkey, MyError> {
@@ -236,7 +252,7 @@ fn parse_starting_items(i: &str) -> IResult<&str, VecDeque<Item>> {
         map(
             preceded(
                 tag("Starting items: "),
-                separated_list0(tag(", "), nom::character::complete::u32),
+                separated_list0(tag(", "), nom::character::complete::u64),
             ),
             |v| v.into_iter().map(|x| Item(x)).collect::<VecDeque<Item>>(),
         ),
@@ -269,7 +285,7 @@ fn parse_operation(i: &str) -> IResult<&str, Operation> {
 
 fn parse_term(i: &str) -> IResult<&str, Term> {
     let p_old = map(tag("old"), |_| Term::Old);
-    let p_digit = map_parser(digit1, nom::character::complete::u32);
+    let p_digit = map_parser(digit1, nom::character::complete::u64);
     let p_const = map(p_digit, |x| Term::Constant(x));
 
     alt((p_old, p_const))(i)
@@ -279,7 +295,7 @@ fn parse_test_divisible_by(i: &str) -> IResult<&str, TestDivisibleBy> {
     preceded(
         space0,
         map(
-            preceded(tag("Test: divisible by "), nom::character::complete::u32),
+            preceded(tag("Test: divisible by "), nom::character::complete::u64),
             |x| TestDivisibleBy(x),
         ),
     )(i)
@@ -405,6 +421,7 @@ Monkey 3:
 
     #[test]
     fn monkey_list_complete_round_works() {
+        // test assumes const MONKEY_GETS_BORED: bool = true;
         let mut ml = MonkeyList {
             round: 0,
             data: vec![
@@ -445,7 +462,10 @@ Monkey 3:
                     num_items_inspected: 0,
                 },
             ],
+            div_product: 0,
         };
+
+        ml.set_div_product();
 
         while ml.round < 20 {
             ml.complete_round().unwrap();
@@ -465,7 +485,7 @@ Monkey 3:
 
         assert_eq!(vec![10, 12, 14, 26, 34], r0_items);
         assert_eq!(vec![245, 93, 53, 199, 115], r1_items);
-        assert_eq!(Vec::<u32>::new(), r2_items);
-        assert_eq!(Vec::<u32>::new(), r3_items);
+        assert_eq!(Vec::<u64>::new(), r2_items);
+        assert_eq!(Vec::<u64>::new(), r3_items);
     }
 }
