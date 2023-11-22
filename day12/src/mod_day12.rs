@@ -49,6 +49,29 @@ impl Bfs {
         self.num_steps += 1;
     }
 
+    pub fn step_up(&mut self, grid: &Grid) {
+        if self.current.is_empty() && self.num_steps == 0 {
+            let start_coords = grid.get_coords_elev_zero();
+            self.current.extend(start_coords.iter());
+            self.visited.extend(start_coords.iter().map(|x| (*x, None)));
+            return;
+        };
+
+        let mut next: HashSet<(usize, usize)> = HashSet::new();
+
+        for curr in &self.current {
+            for next_coord in grid.get_available_moves(*curr).unwrap() {
+                if self.visited.contains_key(&next_coord) {
+                    continue;
+                };
+                self.visited.insert(next_coord, Some(*curr));
+                next.insert(next_coord);
+            }
+        }
+        self.current = next;
+        self.num_steps += 1;
+    }
+
     pub fn step_down(&mut self, grid: &Grid) {
         if self.current.is_empty() && self.num_steps == 0 {
             let start_coord = grid.get_end_coord().unwrap();
@@ -260,6 +283,16 @@ impl Grid {
             false => None,
         }
     }
+
+    pub fn get_coords_elev_zero(&self) -> Vec<(usize, usize)> {
+        let mut v: Vec<(usize, usize)> = Vec::new();
+        for (data_idx, cell) in self.data.iter().enumerate() {
+            if cell.elevation() == 0 {
+                v.push(self.data_idx_to_coord(data_idx).unwrap());
+            }
+        }
+        v
+    }
 }
 
 impl std::fmt::Debug for Grid {
@@ -381,6 +414,31 @@ abdefghi";
         path.reverse();
 
         assert_eq!(31, &path.len() - 1);
+    }
+
+    #[test]
+    fn bfs_up_works() {
+        #[rustfmt::skip]
+        let s = 
+"Sabqponm
+abcryxxl
+accszExk
+acctuvwj
+abdefghi";
+
+        let reader = std::io::BufReader::new(s.as_bytes());
+
+        let grid = parse_into_grid(reader).unwrap();
+
+        let mut bfs = Bfs::new();
+        bfs.step_up(&grid);
+        while !bfs.current.contains(&grid.get_end_coord().unwrap()) {
+            bfs.step_up(&grid);
+        }
+        let mut path = bfs.trace_back_path(grid.get_end_coord().unwrap()).unwrap();
+        path.reverse();
+
+        assert_eq!(29, &path.len() - 1);
     }
 
     #[test]

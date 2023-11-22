@@ -4,6 +4,7 @@ fn main() {
     let file = open_file().unwrap();
     let reader = std::io::BufReader::new(file);
     let grid = mod_day12::parse_into_grid(reader).unwrap();
+
     let mut bfs = mod_day12::Bfs::new();
     bfs.step(&grid);
     while !bfs.current.contains(&grid.get_end_coord().unwrap()) {
@@ -37,8 +38,22 @@ fn main() {
         .collect::<Vec<_>>();
     let down_path1 = bfs_down.trace_back_path(*end_coords[0]).unwrap();
     println!(
-        "Shortest path from elevation 0 to reach highest elevation E = {} steps",
+        "Down: Shortest path from elevation 0 to reach highest elevation E = {} steps",
         down_path1.len() - 1
+    );
+
+    let mut bfs_up = mod_day12::Bfs::new();
+    bfs_up.step_up(&grid);
+    while !bfs_up.current.contains(&grid.get_end_coord().unwrap()) {
+        bfs_up.step(&grid);
+    }
+    let mut up_path1 = bfs_up
+        .trace_back_path(grid.get_end_coord().unwrap())
+        .unwrap();
+    up_path1.reverse();
+    println!(
+        "Up: Shortest path from elevation 0 to reach highest elevation E = {} steps",
+        up_path1.len() - 1
     );
 }
 
