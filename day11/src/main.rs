@@ -16,7 +16,8 @@ fn main() {
         .collect::<Vec<_>>();
     v_num_inspected.sort_by(|a, b| b.cmp(a));
     let monkey_business = v_num_inspected[0..=1]
-        .iter().copied()
+        .iter()
+        .copied()
         .reduce(|acc, el| acc * el)
         .unwrap();
     println!("Monkey business = {}", &monkey_business);

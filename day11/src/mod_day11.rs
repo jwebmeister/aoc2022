@@ -495,7 +495,8 @@ Monkey 3:
                 .collect::<Vec<_>>();
             v_num_inspected.sort_by(|a, b| b.cmp(a));
             let monkey_business = v_num_inspected[0..=1]
-                .iter().copied()
+                .iter()
+                .copied()
                 .reduce(|acc, el| acc * el)
                 .unwrap();
             assert_eq!(10605, monkey_business);
@@ -510,7 +511,8 @@ Monkey 3:
                 .collect::<Vec<_>>();
             v_num_inspected.sort_by(|a, b| b.cmp(a));
             let monkey_business = v_num_inspected[0..=1]
-                .iter().copied()
+                .iter()
+                .copied()
                 .reduce(|acc, el| acc * el)
                 .unwrap();
             assert_eq!(2713310158, monkey_business);
