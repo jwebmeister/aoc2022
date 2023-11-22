@@ -1,7 +1,20 @@
 mod mod_day12;
 
 fn main() {
-    println!("Hello, world!");
+    let file = open_file().unwrap();
+    let reader = std::io::BufReader::new(file);
+    let grid = mod_day12::parse_into_grid(reader).unwrap();
+    let mut bfs = mod_day12::Bfs::new();
+    bfs.step(&grid);
+    while !bfs.current.contains(&grid.get_end_coord().unwrap()) {
+        bfs.step(&grid);
+    }
+    let mut path = bfs.trace_back_path(grid.get_end_coord().unwrap()).unwrap();
+    path.reverse();
+    println!(
+        "Shortest path to reach highest elevation = {} steps",
+        path.len() - 1
+    );
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {

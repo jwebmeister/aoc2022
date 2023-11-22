@@ -8,20 +8,26 @@ pub enum MyError {
     Io(#[from] std::io::Error),
     #[error("Row width doesn't match first row, error while parsing")]
     ParseMismatchRowWidth,
-    #[error("Invalid coordinate for grid")]
+    #[error("Invalid coordinate for grid. Coord={0:?}")]
     InvalidGridCoordinate((usize, usize)),
+    #[error("Couldn't find coordinate in BFS visited coordinates. Coord={0:?}")]
+    BFSNotVisitedCoord((usize, usize)),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Bfs {
-    visited: HashMap<(usize, usize), Option<(usize, usize)>>,
-    current: HashSet<(usize, usize)>,
-    num_steps: usize,
+    pub visited: HashMap<(usize, usize), Option<(usize, usize)>>,
+    pub current: HashSet<(usize, usize)>,
+    pub num_steps: usize,
 }
 
 impl Bfs {
+    pub fn new() -> Self {
+        Bfs::default()
+    }
+
     pub fn step(&mut self, grid: &Grid) {
-        if self.current.is_empty() {
+        if self.current.is_empty() && self.num_steps == 0 {
             let start_coord = grid.get_start_coord().unwrap();
             self.current.insert(start_coord);
             self.visited.insert(start_coord, None);
@@ -35,12 +41,31 @@ impl Bfs {
                 if self.visited.contains_key(&next_coord) {
                     continue;
                 };
-                self.visited.insert(next_coord, Some(*curr) );
+                self.visited.insert(next_coord, Some(*curr));
                 next.insert(next_coord);
             }
         }
         self.current = next;
         self.num_steps += 1;
+    }
+
+    pub fn trace_back_path(&self, coord: (usize, usize)) -> Result<Vec<(usize, usize)>, MyError> {
+        let mut back_path: Vec<(usize, usize)> = Vec::new();
+        if !self.visited.contains_key(&coord) {
+            return Err(MyError::BFSNotVisitedCoord(coord));
+        }
+        back_path.push(coord);
+
+        let maybe_next_coord = self.visited[&coord];
+        match maybe_next_coord {
+            Some(next_coord) => {
+                let r = self.trace_back_path(next_coord)?;
+                back_path.extend(r);
+            }
+            None => return Ok(back_path),
+        };
+
+        Ok(back_path)
     }
 }
 
@@ -89,6 +114,10 @@ impl Grid {
             .get_cell_from_coord(coord)
             .ok_or(MyError::InvalidGridCoordinate(coord))?;
 
+        if matches!(ref_cell, Cell::End) {
+            return Ok(HashSet::new());
+        }
+
         let imoves = vec![
             (irow - 1, icol),
             (irow + 1, icol),
@@ -103,7 +132,7 @@ impl Grid {
             })
             .map(|x| (x.0 as usize, x.1 as usize))
             .filter(|x| match self.get_cell_from_coord(*x) {
-                Some(cell) => cell.elevation() <= ref_cell.elevation() + 1,
+                Some(cell) => cell.elevation() <= (ref_cell.elevation() + 1),
                 None => false,
             })
             .collect::<HashSet<(usize, usize)>>();
@@ -153,7 +182,7 @@ impl Grid {
     }
 
     pub fn data_idx_to_coord(&self, data_idx: usize) -> Option<(usize, usize)> {
-        let row = data_idx / (self.width - 1);
+        let row = data_idx / self.width;
         let col = data_idx % self.width;
         let coord = (row, col);
         match self.is_valid_coord(coord) {
@@ -204,7 +233,7 @@ impl std::ops::IndexMut<(usize, usize)> for Grid {
     }
 }
 
-fn parse_into_grid<R: std::io::BufRead>(mut reader: R) -> Result<Grid, MyError> {
+pub fn parse_into_grid<R: std::io::BufRead>(mut reader: R) -> Result<Grid, MyError> {
     let mut first_line = String::new();
     reader.read_line(&mut first_line)?;
 
@@ -265,5 +294,30 @@ abdefghi";
         let g = parse_into_grid(reader).unwrap();
 
         assert_eq!(s, format!("{:?}", g).trim());
+    }
+
+    #[test]
+    fn bfs_works() {
+        #[rustfmt::skip]
+        let s = 
+"Sabqponm
+abcryxxl
+accszExk
+acctuvwj
+abdefghi";
+
+        let reader = std::io::BufReader::new(s.as_bytes());
+
+        let grid = parse_into_grid(reader).unwrap();
+
+        let mut bfs = Bfs::new();
+        bfs.step(&grid);
+        while !bfs.current.contains(&grid.get_end_coord().unwrap()) {
+            bfs.step(&grid);
+        }
+        let mut path = bfs.trace_back_path(grid.get_end_coord().unwrap()).unwrap();
+        path.reverse();
+
+        assert_eq!(31, &path.len() - 1);
     }
 }
