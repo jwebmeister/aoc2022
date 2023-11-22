@@ -280,7 +280,7 @@ mod tests {
         r.extend((0..5).map(|x| (x, 4)));
         r.extend((0..5).map(|y| (0, y)));
         r.extend((0..5).map(|y| (4, y)));
-        r.extend([(1, 1), (2, 1), (1, 2), (3, 2), (2, 3)].into_iter());
+        r.extend([(1, 1), (2, 1), (1, 2), (3, 2), (2, 3)]);
 
         let inner = std::io::Cursor::new(&s);
         let hs1 = visible_any_side(inner).unwrap();

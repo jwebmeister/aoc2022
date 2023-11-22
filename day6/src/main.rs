@@ -104,23 +104,23 @@ mod tests {
 
     #[test]
     fn u8_to_u32_bitset_works() {
-        assert_eq!(u8_to_u32_bitset('a' as u8).unwrap(), 0b_1);
-        assert_eq!(u8_to_u32_bitset('b' as u8).unwrap(), 0b_10);
-        assert_eq!(u8_to_u32_bitset('c' as u8).unwrap(), 0b_100);
+        assert_eq!(u8_to_u32_bitset(b'a').unwrap(), 0b_1);
+        assert_eq!(u8_to_u32_bitset(b'b').unwrap(), 0b_10);
+        assert_eq!(u8_to_u32_bitset(b'c').unwrap(), 0b_100);
         assert_eq!(
-            u8_to_u32_bitset('z' as u8).unwrap(),
+            u8_to_u32_bitset(b'z').unwrap(),
             0b_10000000000000000000000000
         );
         assert!(matches!(
-            u8_to_u32_bitset('A' as u8),
+            u8_to_u32_bitset(b'A'),
             Err(MyError::NotLowercaseChar('A'))
         ));
         assert!(matches!(
-            u8_to_u32_bitset('0' as u8),
+            u8_to_u32_bitset(b'0'),
             Err(MyError::NotLowercaseChar('0'))
         ));
         assert!(matches!(
-            u8_to_u32_bitset(255 as u8),
+            u8_to_u32_bitset(255_u8),
             Err(MyError::NotLowercaseChar(_))
         ));
     }

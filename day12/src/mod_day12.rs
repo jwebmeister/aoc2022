@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-
+use std::fmt::Write;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -118,12 +118,10 @@ impl Grid {
             return Ok(HashSet::new());
         }
 
-        let imoves = vec![
-            (irow - 1, icol),
+        let imoves = [(irow - 1, icol),
             (irow + 1, icol),
             (irow, icol - 1),
-            (irow, icol + 1),
-        ];
+            (irow, icol + 1)];
 
         let umoves = imoves
             .iter()
@@ -173,7 +171,7 @@ impl Grid {
         Some(&self.data[i])
     }
 
-    pub fn get_mut_cell_from_coord(&mut self, coord: (usize, usize)) -> Option<&Cell> {
+    pub fn _get_mut_cell_from_coord(&mut self, coord: (usize, usize)) -> Option<&mut Cell> {
         if !self.is_valid_coord(coord) {
             return None;
         };
@@ -191,7 +189,7 @@ impl Grid {
         }
     }
 
-    pub fn coord_to_data_idx(&self, coord: (usize, usize)) -> Option<usize> {
+    pub fn _coord_to_data_idx(&self, coord: (usize, usize)) -> Option<usize> {
         let row = coord.0;
         let col = coord.1;
         let data_idx = (row * self.width) + col;
@@ -210,8 +208,10 @@ impl std::fmt::Debug for Grid {
             let idx_end = (row + 1) * self.width;
             let line = self.data[idx_start..idx_end]
                 .iter()
-                .map(|n| format!("{:?}", n))
-                .collect::<String>();
+                .fold(String::new(), |mut output, n| {
+                    let _ = write!(output, "{:?}", *n);
+                    output
+                });
             writeln!(f, "{}", line)?;
         }
         Ok(())

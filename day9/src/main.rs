@@ -190,7 +190,7 @@ L 5
 R 2";
         let v = s
             .lines()
-            .map(|l| parse_move(l))
+            .map(parse_move)
             .collect::<Result<Vec<_>, MyError>>()
             .unwrap();
         let r = vec![

@@ -37,7 +37,7 @@ pub struct MonkeyList {
 
 impl MonkeyList {
     pub fn process_monkey(&mut self, id: usize) -> Result<(), MyError> {
-        let monkey = &mut self.data[id as usize];
+        let monkey = &mut self.data[id];
         let to_send_items = monkey.complete_turn(self.div_product)?;
 
         for send_item in to_send_items {
@@ -254,7 +254,7 @@ fn parse_starting_items(i: &str) -> IResult<&str, VecDeque<Item>> {
                 tag("Starting items: "),
                 separated_list0(tag(", "), nom::character::complete::u64),
             ),
-            |v| v.into_iter().map(|x| Item(x)).collect::<VecDeque<Item>>(),
+            |v| v.into_iter().map(Item).collect::<VecDeque<Item>>(),
         ),
     )(i)
 }
@@ -286,7 +286,7 @@ fn parse_operation(i: &str) -> IResult<&str, Operation> {
 fn parse_term(i: &str) -> IResult<&str, Term> {
     let p_old = map(tag("old"), |_| Term::Old);
     let p_digit = map_parser(digit1, nom::character::complete::u64);
-    let p_const = map(p_digit, |x| Term::Constant(x));
+    let p_const = map(p_digit, Term::Constant);
 
     alt((p_old, p_const))(i)
 }
@@ -296,7 +296,7 @@ fn parse_test_divisible_by(i: &str) -> IResult<&str, TestDivisibleBy> {
         space0,
         map(
             preceded(tag("Test: divisible by "), nom::character::complete::u64),
-            |x| TestDivisibleBy(x),
+            TestDivisibleBy,
         ),
     )(i)
 }
@@ -309,7 +309,7 @@ fn parse_test_if_true(i: &str) -> IResult<&str, TestIfTrue> {
                 tag("If true: throw to monkey "),
                 nom::character::complete::u8,
             ),
-            |x| TestIfTrue(x),
+            TestIfTrue,
         ),
     )(i)
 }
@@ -322,7 +322,7 @@ fn parse_test_if_false(i: &str) -> IResult<&str, TestIfFalse> {
                 tag("If false: throw to monkey "),
                 nom::character::complete::u8,
             ),
-            |x| TestIfFalse(x),
+            TestIfFalse,
         ),
     )(i)
 }
@@ -495,8 +495,7 @@ Monkey 3:
                 .collect::<Vec<_>>();
             v_num_inspected.sort_by(|a, b| b.cmp(a));
             let monkey_business = v_num_inspected[0..=1]
-                .iter()
-                .map(|el| *el)
+                .iter().copied()
                 .reduce(|acc, el| acc * el)
                 .unwrap();
             assert_eq!(10605, monkey_business);
@@ -511,8 +510,7 @@ Monkey 3:
                 .collect::<Vec<_>>();
             v_num_inspected.sort_by(|a, b| b.cmp(a));
             let monkey_business = v_num_inspected[0..=1]
-                .iter()
-                .map(|el| *el)
+                .iter().copied()
                 .reduce(|acc, el| acc * el)
                 .unwrap();
             assert_eq!(2713310158, monkey_business);
