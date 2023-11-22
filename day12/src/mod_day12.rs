@@ -9,10 +9,20 @@ pub enum MyError {
 }
 
 #[derive(Clone, Copy)]
-enum Cell {
+pub enum Cell {
     Start,
     End,
     Square(u8),
+}
+
+impl Cell {
+    pub fn elevation(&self) -> u8 {
+        match self {
+            Cell::Start => 0,
+            Cell::End => 25,
+            Cell::Square(n) => *n,
+        }
+    }
 }
 
 impl std::fmt::Debug for Cell {
@@ -25,10 +35,45 @@ impl std::fmt::Debug for Cell {
     }
 }
 
-struct Grid {
+pub struct Grid {
     width: usize,
     height: usize,
     data: Vec<Cell>,
+}
+
+impl Grid {
+    pub fn get_start_data_idx(&self) -> Option<usize> {
+        self.data.iter().position(|c| matches!(c, Cell::Start))
+    }
+
+    pub fn get_end_data_idx(&self) -> Option<usize> {
+        self.data.iter().position(|c| matches!(c, Cell::End))
+    }
+
+    pub fn get_start_coord(&self) -> Option<(usize, usize)> {
+        self.data_idx_to_coord(self.get_start_data_idx()?)
+    }
+
+    pub fn get_end_coord(&self) -> Option<(usize, usize)> {
+        self.data_idx_to_coord(self.get_end_data_idx()?)
+    }
+
+    pub fn data_idx_to_coord(&self, data_idx: usize) -> Option<(usize, usize)> {
+        let row = data_idx / (self.width - 1);
+        let col = data_idx % self.width;
+        match (0..self.data.len()).contains(&data_idx) {
+            true => Some((row, col)),
+            false => None,
+        }
+    }
+
+    pub fn coord_to_data_idx(&self, coord: (usize, usize)) -> Option<usize> {
+        let data_idx = (coord.0 * self.width) + coord.1;
+        match (0..self.data.len()).contains(&data_idx) {
+            true => Some(data_idx),
+            false => None,
+        }
+    }
 }
 
 impl std::fmt::Debug for Grid {
@@ -46,7 +91,6 @@ impl std::fmt::Debug for Grid {
         Ok(())
     }
 }
-
 
 impl std::ops::Index<(usize, usize)> for Grid {
     type Output = Cell;
