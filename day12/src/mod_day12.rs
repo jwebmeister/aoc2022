@@ -49,6 +49,29 @@ impl Bfs {
         self.num_steps += 1;
     }
 
+    pub fn step_down(&mut self, grid: &Grid) {
+        if self.current.is_empty() && self.num_steps == 0 {
+            let start_coord = grid.get_end_coord().unwrap();
+            self.current.insert(start_coord);
+            self.visited.insert(start_coord, None);
+            return;
+        };
+
+        let mut next: HashSet<(usize, usize)> = HashSet::new();
+
+        for curr in &self.current {
+            for next_coord in grid.get_available_moves_down(*curr).unwrap() {
+                if self.visited.contains_key(&next_coord) {
+                    continue;
+                };
+                self.visited.insert(next_coord, Some(*curr));
+                next.insert(next_coord);
+            }
+        }
+        self.current = next;
+        self.num_steps += 1;
+    }
+
     pub fn trace_back_path(&self, coord: (usize, usize)) -> Result<Vec<(usize, usize)>, MyError> {
         let mut back_path: Vec<(usize, usize)> = Vec::new();
         if !self.visited.contains_key(&coord) {
@@ -118,10 +141,12 @@ impl Grid {
             return Ok(HashSet::new());
         }
 
-        let imoves = [(irow - 1, icol),
+        let imoves = [
+            (irow - 1, icol),
             (irow + 1, icol),
             (irow, icol - 1),
-            (irow, icol + 1)];
+            (irow, icol + 1),
+        ];
 
         let umoves = imoves
             .iter()
@@ -131,6 +156,43 @@ impl Grid {
             .map(|x| (x.0 as usize, x.1 as usize))
             .filter(|x| match self.get_cell_from_coord(*x) {
                 Some(cell) => cell.elevation() <= (ref_cell.elevation() + 1),
+                None => false,
+            })
+            .collect::<HashSet<(usize, usize)>>();
+
+        Ok(umoves)
+    }
+
+    pub fn get_available_moves_down(
+        &self,
+        coord: (usize, usize),
+    ) -> Result<HashSet<(usize, usize)>, MyError> {
+        let irow = coord.0 as isize;
+        let icol = coord.1 as isize;
+
+        let ref_cell = self
+            .get_cell_from_coord(coord)
+            .ok_or(MyError::InvalidGridCoordinate(coord))?;
+
+        if ref_cell.elevation() == 0 {
+            return Ok(HashSet::new());
+        }
+
+        let imoves = [
+            (irow - 1, icol),
+            (irow + 1, icol),
+            (irow, icol - 1),
+            (irow, icol + 1),
+        ];
+
+        let umoves = imoves
+            .iter()
+            .filter(|x| {
+                !(x.0 < 0 || x.1 < 0 || x.0 >= self.height as isize || x.1 >= self.width as isize)
+            })
+            .map(|x| (x.0 as usize, x.1 as usize))
+            .filter(|x| match self.get_cell_from_coord(*x) {
+                Some(cell) => cell.elevation() >= (ref_cell.elevation() - 1),
                 None => false,
             })
             .collect::<HashSet<(usize, usize)>>();
@@ -319,5 +381,43 @@ abdefghi";
         path.reverse();
 
         assert_eq!(31, &path.len() - 1);
+    }
+
+    #[test]
+    fn bfs_down_works() {
+        #[rustfmt::skip]
+        let s = 
+"Sabqponm
+abcryxxl
+accszExk
+acctuvwj
+abdefghi";
+
+        let reader = std::io::BufReader::new(s.as_bytes());
+
+        let grid = parse_into_grid(reader).unwrap();
+
+        let mut bfs = Bfs::new();
+        bfs.step_down(&grid);
+        while !bfs.current.is_empty()
+            && !bfs
+                .current
+                .iter()
+                .map(|coord| grid.get_cell_from_coord(*coord).unwrap().elevation())
+                .any(|x| x == 0)
+        {
+            bfs.step_down(&grid);
+            if bfs.num_steps >= 300 {
+                panic!("Too many steps")
+            };
+        }
+        let end_coords = bfs
+            .current
+            .iter()
+            .filter(|coord| grid.get_cell_from_coord(**coord).unwrap().elevation() == 0)
+            .collect::<Vec<_>>();
+        let path1 = bfs.trace_back_path(*end_coords[0]).unwrap();
+
+        assert_eq!(29, &path1.len() - 1);
     }
 }

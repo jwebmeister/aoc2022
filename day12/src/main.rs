@@ -12,8 +12,33 @@ fn main() {
     let mut path = bfs.trace_back_path(grid.get_end_coord().unwrap()).unwrap();
     path.reverse();
     println!(
-        "Shortest path to reach highest elevation = {} steps",
+        "Shortest path from Start to reach highest elevation E = {} steps",
         path.len() - 1
+    );
+
+    let mut bfs_down = mod_day12::Bfs::new();
+    bfs_down.step_down(&grid);
+    while !bfs_down.current.is_empty()
+        && !(bfs_down
+            .current
+            .iter()
+            .map(|coord| grid.get_cell_from_coord(*coord).unwrap().elevation())
+            .any(|x| x == 0))
+    {
+        bfs_down.step_down(&grid);
+        if bfs_down.num_steps >= 100_000_000 {
+            panic!("Too many steps")
+        };
+    }
+    let end_coords = bfs_down
+        .current
+        .iter()
+        .filter(|coord| grid.get_cell_from_coord(**coord).unwrap().elevation() == 0)
+        .collect::<Vec<_>>();
+    let down_path1 = bfs_down.trace_back_path(*end_coords[0]).unwrap();
+    println!(
+        "Shortest path from elevation 0 to reach highest elevation E = {} steps",
+        down_path1.len() - 1
     );
 }
 
