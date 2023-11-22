@@ -1,13 +1,13 @@
-use std::collections::VecDeque;
-
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    combinator::map,
+    character::complete::{digit1, one_of, space0, space1},
+    combinator::{map, map_parser},
     multi::separated_list0,
-    sequence::{delimited, preceded, separated_pair},
+    sequence::{delimited, preceded, tuple},
     Finish, IResult,
 };
+use std::collections::VecDeque;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -28,12 +28,12 @@ impl<T> From<nom::error::Error<T>> for MyError {
 
 #[derive(Clone, PartialEq, PartialOrd)]
 pub struct MonkeyList {
-    round: usize,
-    data: Vec<Monkey>,
+    pub round: usize,
+    pub data: Vec<Monkey>,
 }
 
 impl MonkeyList {
-    fn process_monkey(&mut self, id: usize) -> Result<(), MyError> {
+    pub fn process_monkey(&mut self, id: usize) -> Result<(), MyError> {
         let monkey = &mut self.data[id as usize];
         let to_send_items = monkey.complete_turn()?;
 
@@ -43,11 +43,12 @@ impl MonkeyList {
         Ok(())
     }
 
-    fn complete_round(&mut self) -> Result<(), MyError> {
+    pub fn complete_round(&mut self) -> Result<usize, MyError> {
         for i in 0..self.data.len() {
             self.process_monkey(i)?;
         }
-        Ok(())
+        self.round += 1;
+        Ok(self.round)
     }
 }
 
@@ -69,10 +70,11 @@ pub struct Monkey {
     pub div: TestDivisibleBy,
     pub if_true: TestIfTrue,
     pub if_false: TestIfFalse,
+    pub num_items_inspected: u32,
 }
 
 impl Monkey {
-    fn process_one_item(&mut self) -> Result<(u8, Item), MyError> {
+    pub fn process_one_item(&mut self) -> Result<(u8, Item), MyError> {
         let mut item = self.items.pop_front().ok_or(MyError::EmptyItems)?;
         item.inspect(&self.op);
         item.bored_with();
@@ -80,10 +82,11 @@ impl Monkey {
         Ok((send_to, item))
     }
 
-    fn complete_turn(&mut self) -> Result<Vec<(u8, Item)>, MyError> {
+    pub fn complete_turn(&mut self) -> Result<Vec<(u8, Item)>, MyError> {
         let mut v = Vec::new();
         while !self.items.is_empty() {
             v.push(self.process_one_item()?);
+            self.num_items_inspected += 1;
         }
         Ok(v)
     }
@@ -91,7 +94,11 @@ impl Monkey {
 
 impl std::fmt::Debug for Monkey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Monkey {0}: {1:?}", &self.id, &self.items)?;
+        writeln!(
+            f,
+            "Monkey {0}: Inspected={1}, {2:?}",
+            &self.id, &self.num_items_inspected, &self.items
+        )?;
         Ok(())
     }
 }
@@ -100,19 +107,19 @@ impl std::fmt::Debug for Monkey {
 pub struct Item(u32);
 
 impl Item {
-    fn inspect(&mut self, op: &Operation) {
-        self.0 = op.op_result(self.0);
+    pub fn inspect(&mut self, op: &Operation) {
+        self.0 = op.eval(self.0);
     }
 
-    fn bored_with(&mut self) {
+    pub fn bored_with(&mut self) {
         self.0 /= 3;
     }
 
-    fn test_divisible_by(&self, div: &TestDivisibleBy) -> bool {
+    fn _test_divisible_by(&self, div: &TestDivisibleBy) -> bool {
         self.0 % div.0 == 0
     }
 
-    fn where_to_throw(
+    pub fn where_to_throw(
         &self,
         div: &TestDivisibleBy,
         if_true: &TestIfTrue,
@@ -148,30 +155,10 @@ pub enum Operation {
 }
 
 impl Operation {
-    fn op_result(&self, old: u32) -> u32 {
+    pub fn eval(&self, old: u32) -> u32 {
         match self {
-            Operation::Add(a, b) => {
-                let a_n = match a {
-                    Term::Old => old,
-                    Term::Constant(a_n) => *a_n,
-                };
-                let b_n = match b {
-                    Term::Old => old,
-                    Term::Constant(b_n) => *b_n,
-                };
-                a_n + b_n
-            }
-            Operation::Multiply(a, b) => {
-                let a_n = match a {
-                    Term::Old => old,
-                    Term::Constant(a_n) => *a_n,
-                };
-                let b_n = match b {
-                    Term::Old => old,
-                    Term::Constant(b_n) => *b_n,
-                };
-                a_n * b_n
-            }
+            Operation::Add(a, b) => a.eval(old) + b.eval(old),
+            Operation::Multiply(a, b) => a.eval(old) * b.eval(old),
         }
     }
 }
@@ -180,6 +167,15 @@ impl Operation {
 pub enum Term {
     Old,
     Constant(u32),
+}
+
+impl Term {
+    pub fn eval(&self, old: u32) -> u32 {
+        match &self {
+            Term::Old => old,
+            Term::Constant(x) => *x,
+        }
+    }
 }
 
 pub fn parse_all_monkeys<R: std::io::BufRead>(mut reader: R) -> Result<MonkeyList, MyError> {
@@ -226,6 +222,7 @@ fn parse_monkey<R: std::io::BufRead>(reader: &mut R) -> Result<Monkey, MyError> 
         div,
         if_true,
         if_false,
+        num_items_inspected: 0,
     })
 }
 
@@ -235,7 +232,7 @@ fn parse_monkey_id(i: &str) -> IResult<&str, u8> {
 
 fn parse_starting_items(i: &str) -> IResult<&str, VecDeque<Item>> {
     preceded(
-        nom::character::complete::space0,
+        space0,
         map(
             preceded(
                 tag("Starting items: "),
@@ -247,47 +244,40 @@ fn parse_starting_items(i: &str) -> IResult<&str, VecDeque<Item>> {
 }
 
 fn parse_operation(i: &str) -> IResult<&str, Operation> {
-    alt((parse_operation_add, parse_operation_multiply))(i)
-}
-
-fn parse_operation_add(i: &str) -> IResult<&str, Operation> {
-    let op = '+';
     preceded(
-        nom::character::complete::space0,
+        space0,
         map(
             preceded(
                 tag("Operation: new = "),
-                separated_pair(parse_term, tag(format!(" {} ", op).as_str()), parse_term),
+                tuple((
+                    parse_term,
+                    preceded(space1, one_of("+*")),
+                    preceded(space1, parse_term),
+                )),
             ),
-            |x| Operation::Add(x.0, x.1),
-        ),
-    )(i)
-}
-
-fn parse_operation_multiply(i: &str) -> IResult<&str, Operation> {
-    let op = '*';
-    preceded(
-        nom::character::complete::space0,
-        map(
-            preceded(
-                tag("Operation: new = "),
-                separated_pair(parse_term, tag(format!(" {} ", op).as_str()), parse_term),
-            ),
-            |x| Operation::Multiply(x.0, x.1),
+            |x| match x.1 {
+                '+' => Operation::Add(x.0, x.2),
+                '*' => Operation::Multiply(x.0, x.2),
+                _ => {
+                    dbg!("Op char is not + or *");
+                    unreachable!()
+                }
+            },
         ),
     )(i)
 }
 
 fn parse_term(i: &str) -> IResult<&str, Term> {
     let p_old = map(tag("old"), |_| Term::Old);
-    let p_const = map(nom::character::complete::u32, |x| Term::Constant(x));
+    let p_digit = map_parser(digit1, nom::character::complete::u32);
+    let p_const = map(p_digit, |x| Term::Constant(x));
 
     alt((p_old, p_const))(i)
 }
 
 fn parse_test_divisible_by(i: &str) -> IResult<&str, TestDivisibleBy> {
     preceded(
-        nom::character::complete::space0,
+        space0,
         map(
             preceded(tag("Test: divisible by "), nom::character::complete::u32),
             |x| TestDivisibleBy(x),
@@ -297,7 +287,7 @@ fn parse_test_divisible_by(i: &str) -> IResult<&str, TestDivisibleBy> {
 
 fn parse_test_if_true(i: &str) -> IResult<&str, TestIfTrue> {
     preceded(
-        nom::character::complete::space0,
+        space0,
         map(
             preceded(
                 tag("If true: throw to monkey "),
@@ -310,7 +300,7 @@ fn parse_test_if_true(i: &str) -> IResult<&str, TestIfTrue> {
 
 fn parse_test_if_false(i: &str) -> IResult<&str, TestIfFalse> {
     preceded(
-        nom::character::complete::space0,
+        space0,
         map(
             preceded(
                 tag("If false: throw to monkey "),
@@ -323,9 +313,17 @@ fn parse_test_if_false(i: &str) -> IResult<&str, TestIfFalse> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::vec_deque;
-
     use super::*;
+
+    #[test]
+    fn parse_operation_works() {
+        let s = "  Operation: new = old * 19\n";
+        let r = Operation::Multiply(Term::Old, Term::Constant(19));
+
+        let op = parse_operation(s).unwrap().1;
+
+        assert_eq!(op, r);
+    }
 
     #[test]
     fn parse_all_monkeys_works() {
@@ -367,6 +365,7 @@ Monkey 3:
                 div: TestDivisibleBy(23),
                 if_true: TestIfTrue(2),
                 if_false: TestIfFalse(3),
+                num_items_inspected: 0,
             },
             Monkey {
                 id: 1,
@@ -375,6 +374,7 @@ Monkey 3:
                 div: TestDivisibleBy(19),
                 if_true: TestIfTrue(2),
                 if_false: TestIfFalse(0),
+                num_items_inspected: 0,
             },
             Monkey {
                 id: 2,
@@ -383,6 +383,7 @@ Monkey 3:
                 div: TestDivisibleBy(13),
                 if_true: TestIfTrue(1),
                 if_false: TestIfFalse(3),
+                num_items_inspected: 0,
             },
             Monkey {
                 id: 3,
@@ -391,6 +392,7 @@ Monkey 3:
                 div: TestDivisibleBy(17),
                 if_true: TestIfTrue(0),
                 if_false: TestIfFalse(1),
+                num_items_inspected: 0,
             },
         ];
 
@@ -413,6 +415,7 @@ Monkey 3:
                     div: TestDivisibleBy(23),
                     if_true: TestIfTrue(2),
                     if_false: TestIfFalse(3),
+                    num_items_inspected: 0,
                 },
                 Monkey {
                     id: 1,
@@ -421,6 +424,7 @@ Monkey 3:
                     div: TestDivisibleBy(19),
                     if_true: TestIfTrue(2),
                     if_false: TestIfFalse(0),
+                    num_items_inspected: 0,
                 },
                 Monkey {
                     id: 2,
@@ -429,6 +433,7 @@ Monkey 3:
                     div: TestDivisibleBy(13),
                     if_true: TestIfTrue(1),
                     if_false: TestIfFalse(3),
+                    num_items_inspected: 0,
                 },
                 Monkey {
                     id: 3,
@@ -437,12 +442,30 @@ Monkey 3:
                     div: TestDivisibleBy(17),
                     if_true: TestIfTrue(0),
                     if_false: TestIfFalse(1),
+                    num_items_inspected: 0,
                 },
             ],
         };
 
-        ml.complete_round().unwrap();
+        while ml.round < 20 {
+            ml.complete_round().unwrap();
+        }
 
-        dbg!(&ml);
+        let mut iter = ml.data.iter().map(|m| m.num_items_inspected);
+
+        assert_eq!(101, iter.next().unwrap());
+        assert_eq!(95, iter.next().unwrap());
+        assert_eq!(7, iter.next().unwrap());
+        assert_eq!(105, iter.next().unwrap());
+
+        let r0_items = ml.data[0].items.iter().map(|x| x.0).collect::<Vec<_>>();
+        let r1_items = ml.data[1].items.iter().map(|x| x.0).collect::<Vec<_>>();
+        let r2_items = ml.data[2].items.iter().map(|x| x.0).collect::<Vec<_>>();
+        let r3_items = ml.data[3].items.iter().map(|x| x.0).collect::<Vec<_>>();
+
+        assert_eq!(vec![10, 12, 14, 26, 34], r0_items);
+        assert_eq!(vec![245, 93, 53, 199, 115], r1_items);
+        assert_eq!(Vec::<u32>::new(), r2_items);
+        assert_eq!(Vec::<u32>::new(), r3_items);
     }
 }

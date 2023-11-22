@@ -1,7 +1,26 @@
 mod mod_day11;
 
 fn main() {
-    println!("Hello, world!");
+    let file = open_file().unwrap();
+    let reader = std::io::BufReader::new(file);
+    let mut ml = mod_day11::parse_all_monkeys(reader).unwrap();
+    while ml.round < 20 {
+        ml.complete_round().unwrap();
+    }
+    dbg!(&ml);
+
+    let mut v_num_inspected = ml
+        .data
+        .into_iter()
+        .map(|m| m.num_items_inspected)
+        .collect::<Vec<_>>();
+    v_num_inspected.sort_by(|a, b| b.cmp(a));
+    let monkey_business = v_num_inspected[0..=1]
+        .iter()
+        .map(|el| *el)
+        .reduce(|acc, el| acc * el)
+        .unwrap();
+    println!("Monkey business = {}", &monkey_business);
 }
 
 fn open_file() -> std::io::Result<std::fs::File> {
