@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -6,6 +8,12 @@ pub enum MyError {
     Io(#[from] std::io::Error),
     #[error("Row width doesn't match first row, error while parsing")]
     ParseMismatchRowWidth,
+}
+
+struct Bfs {
+    visited: HashMap<(usize, usize), Option<Cell>>,
+    current: HashSet<(usize, usize)>,
+    num_steps: usize
 }
 
 #[derive(Clone, Copy)]
