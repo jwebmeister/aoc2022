@@ -1,14 +1,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-use day12::MyApp;
+use day12::AppDay12;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
     env_logger::init();
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(
-        "MyApp",
+        "AppDay12",
         native_options,
-        Box::new(|cc| Box::new(MyApp::new(cc))),
+        Box::new(|cc| Box::new(AppDay12::new(cc))),
     )
 }
 
@@ -24,7 +24,7 @@ fn main() {
             .start(
                 "the_canvas_id", // hardcode it
                 web_options,
-                Box::new(|cc| Box::new(MyApp::new(cc))),
+                Box::new(|cc| Box::new(AppDay12::new(cc))),
             )
             .await
             .expect("failed to start eframe");

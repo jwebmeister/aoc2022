@@ -1,6 +1,6 @@
 {
-  "name": "egui Template PWA",
-  "short_name": "egui-template-pwa",
+  "name": "AppDay12",
+  "short_name": "app-day12",
   "icons": [
     {
       "src": "./icon-256.png",

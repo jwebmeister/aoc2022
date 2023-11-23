@@ -1,17 +1,17 @@
-use egui::{emath, Context, Pos2, Rect, Sense};
+use egui::{Context, Sense};
 use std::future::Future;
 use std::sync::mpsc::{channel, Receiver, Sender};
 
 use crate::mod_day12::*;
 
-pub struct MyApp {
+pub struct AppDay12 {
     grid_channel: (Sender<Grid>, Receiver<Grid>),
     grid: Option<Grid>,
     bfs: Bfs,
     goal_path: Vec<(usize, usize)>,
 }
 
-impl Default for MyApp {
+impl Default for AppDay12 {
     fn default() -> Self {
         Self {
             grid_channel: channel(),
@@ -22,14 +22,14 @@ impl Default for MyApp {
     }
 }
 
-impl MyApp {
+impl AppDay12 {
     /// Called once before the first frame.
     pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        MyApp::default()
+        AppDay12::default()
     }
 }
 
-impl eframe::App for MyApp {
+impl eframe::App for AppDay12 {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         // assign grid once it comes in
         if let Ok(f) = self.grid_channel.1.try_recv() {
@@ -138,11 +138,11 @@ impl eframe::App for MyApp {
 
                 let rect = response.rect;
 
-                let to_screen = emath::RectTransform::from_to(
-                    Rect::from_min_size(Pos2::ZERO, response.rect.square_proportions()),
-                    response.rect,
-                );
-                let from_screen = to_screen.inverse();
+                // let to_screen = emath::RectTransform::from_to(
+                //     Rect::from_min_size(Pos2::ZERO, response.rect.square_proportions()),
+                //     response.rect,
+                // );
+                // let from_screen = to_screen.inverse();
 
                 let cell_width = {
                     let maybe_cell_width = rect.width() / grid.width as f32;
@@ -246,7 +246,7 @@ impl eframe::App for MyApp {
 
                 painter.add(goal_path_shape);
 
-                let cell_rects = grid.iter().enumerate().map(|(data_idx, cell)| {
+                let cell_rects = (0..grid.data.len()).map(|data_idx| {
                     let coord = grid.data_idx_to_coord(data_idx).unwrap();
                     let top_left = rect.min
                         + egui::Vec2::from((
@@ -263,7 +263,7 @@ impl eframe::App for MyApp {
 
                 if let Some(hover_pos) = response.hover_pos() {
                     response.on_hover_ui_at_pointer(|ui| {
-                        let canvas_pos = from_screen * hover_pos;
+                        // let canvas_pos = from_screen * hover_pos;
                         // ui.label(format!("cp:{:?},sp:{:?}", canvas_pos, hover_pos));
 
                         cell_rects
