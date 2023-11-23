@@ -88,9 +88,9 @@ impl eframe::App for MyApp {
                 let from_screen = to_screen.inverse();
 
                 let cell_width = {
-                    let maybe_cell_width = rect.width() as usize / grid.width;
-                    let maybe_cell_height = rect.height() as usize / grid.height;
-                    core::cmp::min(maybe_cell_width, maybe_cell_height) as f32
+                    let maybe_cell_width = rect.width() / grid.width as f32;
+                    let maybe_cell_height = rect.height() / grid.height as f32;
+                    f32::min(maybe_cell_width, maybe_cell_height)
                 };
 
                 let cell_shapes = grid.iter().enumerate().map(|(data_idx, cell)| {
@@ -117,7 +117,7 @@ impl eframe::App for MyApp {
                     };
 
                     let cell_stroke = egui::epaint::Stroke {
-                        width: f32::max(cell_width / 32.0, 0.25),
+                        width: f32::min(cell_width / 32.0, 1.0),
                         color: egui::epaint::Color32::WHITE,
                     };
                     let cell_rounding = egui::epaint::Rounding::ZERO;
@@ -131,6 +131,46 @@ impl eframe::App for MyApp {
                 });
 
                 painter.extend(cell_shapes);
+
+                let bfs_current_shapes = self.bfs.current.iter().map(|coord| {
+                    let center = rect.min
+                        + egui::Vec2::from((
+                            (coord.1 as f32 * cell_width) + (cell_width * 0.5),
+                            (coord.0 as f32 * cell_width) + (cell_width * 0.5),
+                        ));
+                    let radius = cell_width * 0.45;
+                    let fill_color = egui::epaint::ecolor::Color32::YELLOW;
+                    egui::epaint::Shape::circle_filled(center, radius, fill_color)
+                });
+
+                painter.extend(bfs_current_shapes);
+
+                let bfs_visited = self
+                    .bfs
+                    .visited
+                    .iter()
+                    .filter_map(|(coord, op_prev_coord)| {
+                        let curr = rect.min
+                            + egui::Vec2::from((
+                                (coord.1 as f32 * cell_width) + (cell_width * 0.5),
+                                (coord.0 as f32 * cell_width) + (cell_width * 0.5),
+                            ));
+                        let Some(prev_coord) = op_prev_coord else {
+                            return None;
+                        };
+                        let prev = rect.min
+                            + egui::Vec2::from((
+                                (prev_coord.1 as f32 * cell_width) + (cell_width * 0.5),
+                                (prev_coord.0 as f32 * cell_width) + (cell_width * 0.5),
+                            ));
+                        let line_stroke = egui::epaint::Stroke::new(
+                            cell_width * 0.4,
+                            egui::epaint::Color32::YELLOW,
+                        );
+                        Some(egui::epaint::Shape::line_segment([curr, prev], line_stroke))
+                    });
+
+                painter.extend(bfs_visited);
 
                 let cell_rects = grid.iter().enumerate().map(|(data_idx, cell)| {
                     let coord = grid.data_idx_to_coord(data_idx).unwrap();
