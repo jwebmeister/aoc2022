@@ -743,8 +743,10 @@ dependencies = [
  "egui",
  "env_logger",
  "futures",
+ "log",
  "rfd",
  "thiserror",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]
