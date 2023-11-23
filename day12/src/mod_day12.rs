@@ -26,6 +26,12 @@ impl Bfs {
         Bfs::default()
     }
 
+    pub fn reset(&mut self) {
+        self.visited = Default::default();
+        self.current = Default::default();
+        self.num_steps = Default::default();
+    }
+
     pub fn step(&mut self, grid: &Grid) {
         if self.current.is_empty() && self.num_steps == 0 {
             let start_coord = grid.get_start_coord().unwrap();
@@ -256,7 +262,7 @@ impl Grid {
         Some(&self.data[i])
     }
 
-    pub fn _get_mut_cell_from_coord(&mut self, coord: (usize, usize)) -> Option<&mut Cell> {
+    pub fn get_mut_cell_from_coord(&mut self, coord: (usize, usize)) -> Option<&mut Cell> {
         if !self.is_valid_coord(coord) {
             return None;
         };
@@ -274,7 +280,7 @@ impl Grid {
         }
     }
 
-    pub fn _coord_to_data_idx(&self, coord: (usize, usize)) -> Option<usize> {
+    pub fn coord_to_data_idx(&self, coord: (usize, usize)) -> Option<usize> {
         let row = coord.0;
         let col = coord.1;
         let data_idx = (row * self.width) + col;
