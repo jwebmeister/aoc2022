@@ -8,6 +8,7 @@ pub struct MyApp {
     grid_channel: (Sender<Grid>, Receiver<Grid>),
     grid: Option<Grid>,
     bfs: Bfs,
+    goal_path: Vec<(usize, usize)>,
 }
 
 impl Default for MyApp {
@@ -16,6 +17,7 @@ impl Default for MyApp {
             grid_channel: channel(),
             grid: Some(Grid::default()),
             bfs: Default::default(),
+            goal_path: Default::default(),
         }
     }
 }
@@ -32,6 +34,8 @@ impl eframe::App for MyApp {
         // assign grid once it comes in
         if let Ok(f) = self.grid_channel.1.try_recv() {
             self.grid = Some(f);
+            self.bfs.reset();
+            self.goal_path.clear();
         }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -52,13 +56,36 @@ impl eframe::App for MyApp {
                 };
                 if ui.button("⏮").clicked() {
                     self.bfs.reset();
+                    self.goal_path.clear();
                 };
                 if ui.button("▶").clicked() {
-                    if self.grid.is_none() {
+                    if self.grid.is_none() || !self.goal_path.is_empty() {
                         return;
                     };
-                    let grid = self.grid.as_ref();
-                    self.bfs.step(grid.unwrap());
+                    let grid = self.grid.as_ref().unwrap();
+                    if let Some(end_coord) = &grid.get_end_coord() {
+                        self.bfs.step(grid);
+                        if self.bfs.current.contains(end_coord) {
+                            self.goal_path = self.bfs.trace_back_path(*end_coord).unwrap();
+                        }
+                    };
+                };
+                if ui.button("⏭").clicked() {
+                    if self.grid.is_none() || !self.goal_path.is_empty() {
+                        return;
+                    };
+                    let grid = self.grid.as_ref().unwrap();
+                    if let Some(end_coord) = &grid.get_end_coord() {
+                        while self.goal_path.is_empty() {
+                            self.bfs.step(grid);
+                            if self.bfs.current.contains(end_coord) {
+                                self.goal_path = self.bfs.trace_back_path(*end_coord).unwrap();
+                            };
+                            if self.bfs.num_steps >= 1_000_000 {
+                                break;
+                            }
+                        }
+                    };
                 };
                 ui.label(format!("Step: {}", &self.bfs.num_steps));
                 ui.label(format!("Current moves: {}", &self.bfs.current.len()));
@@ -171,6 +198,23 @@ impl eframe::App for MyApp {
                     });
 
                 painter.extend(bfs_visited);
+
+                let goal_path_points = self
+                    .goal_path
+                    .iter()
+                    .map(|coord| {
+                        rect.min
+                            + egui::Vec2::from((
+                                (coord.1 as f32 * cell_width) + (cell_width * 0.5),
+                                (coord.0 as f32 * cell_width) + (cell_width * 0.5),
+                            ))
+                    })
+                    .collect::<Vec<_>>();
+                let goal_path_stroke =
+                    egui::epaint::Stroke::new(cell_width * 0.4, egui::epaint::Color32::RED);
+                let goal_path_shape = egui::epaint::Shape::line(goal_path_points, goal_path_stroke);
+
+                painter.add(goal_path_shape);
 
                 let cell_rects = grid.iter().enumerate().map(|(data_idx, cell)| {
                     let coord = grid.data_idx_to_coord(data_idx).unwrap();
