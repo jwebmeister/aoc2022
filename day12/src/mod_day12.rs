@@ -149,9 +149,22 @@ impl std::fmt::Debug for Cell {
 }
 
 pub struct Grid {
-    width: usize,
-    height: usize,
-    data: Vec<Cell>,
+    pub width: usize,
+    pub height: usize,
+    pub data: Vec<Cell>,
+}
+
+impl Default for Grid {
+    fn default() -> Self {
+        #[rustfmt::skip]
+        let s =  "Sabqponm\n\
+                        abcryxxl\n\
+                        accszExk\n\
+                        acctuvwj\n\
+                        abdefghi";
+        let reader = std::io::BufReader::new(s.as_bytes());
+        parse_into_grid(reader).unwrap()
+    }
 }
 
 impl Grid {
@@ -299,6 +312,14 @@ impl Grid {
         }
         v
     }
+
+    pub fn iter(self: &Self) -> impl Iterator<Item = &Cell> {
+        self.data.iter()
+    }
+
+    pub fn iter_mut(self: &mut Self) -> impl Iterator<Item = &mut Cell> {
+        self.data.iter_mut()
+    }
 }
 
 impl std::fmt::Debug for Grid {
@@ -331,6 +352,15 @@ impl std::ops::IndexMut<(usize, usize)> for Grid {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Cell {
         let i = (index.0 * self.width) + index.1;
         &mut self.data[i]
+    }
+}
+
+impl IntoIterator for Grid {
+    type Item = Cell;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.into_iter()
     }
 }
 
@@ -383,12 +413,11 @@ mod tests {
     #[test]
     fn parse_into_grid_works() {
         #[rustfmt::skip]
-        let s = 
-"Sabqponm
-abcryxxl
-accszExk
-acctuvwj
-abdefghi";
+        let s =  "Sabqponm\n\
+                        abcryxxl\n\
+                        accszExk\n\
+                        acctuvwj\n\
+                        abdefghi";
 
         let reader = std::io::BufReader::new(s.as_bytes());
 
@@ -400,12 +429,11 @@ abdefghi";
     #[test]
     fn bfs_works() {
         #[rustfmt::skip]
-        let s = 
-"Sabqponm
-abcryxxl
-accszExk
-acctuvwj
-abdefghi";
+        let s =  "Sabqponm\n\
+                        abcryxxl\n\
+                        accszExk\n\
+                        acctuvwj\n\
+                        abdefghi";
 
         let reader = std::io::BufReader::new(s.as_bytes());
 
@@ -425,12 +453,11 @@ abdefghi";
     #[test]
     fn bfs_up_works() {
         #[rustfmt::skip]
-        let s = 
-"Sabqponm
-abcryxxl
-accszExk
-acctuvwj
-abdefghi";
+        let s =  "Sabqponm\n\
+                        abcryxxl\n\
+                        accszExk\n\
+                        acctuvwj\n\
+                        abdefghi";
 
         let reader = std::io::BufReader::new(s.as_bytes());
 
@@ -450,12 +477,11 @@ abdefghi";
     #[test]
     fn bfs_down_works() {
         #[rustfmt::skip]
-        let s = 
-"Sabqponm
-abcryxxl
-accszExk
-acctuvwj
-abdefghi";
+        let s =  "Sabqponm\n\
+                        abcryxxl\n\
+                        accszExk\n\
+                        acctuvwj\n\
+                        abdefghi";
 
         let reader = std::io::BufReader::new(s.as_bytes());
 
