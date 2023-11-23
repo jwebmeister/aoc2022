@@ -87,6 +87,36 @@ impl eframe::App for MyApp {
                         }
                     };
                 };
+                if ui.button("⏶").clicked() {
+                    if self.grid.is_none() || !self.goal_path.is_empty() {
+                        return;
+                    };
+                    let grid = self.grid.as_ref().unwrap();
+                    if let Some(end_coord) = &grid.get_end_coord() {
+                        self.bfs.step_up(grid);
+                        if self.bfs.current.contains(end_coord) {
+                            self.goal_path = self.bfs.trace_back_path(*end_coord).unwrap();
+                        }
+                    };
+                };
+                if ui.button("⏫").clicked() {
+                    if self.grid.is_none() || !self.goal_path.is_empty() {
+                        return;
+                    };
+                    let grid = self.grid.as_ref().unwrap();
+                    if let Some(end_coord) = &grid.get_end_coord() {
+                        while self.goal_path.is_empty() {
+                            self.bfs.step_up(grid);
+                            if self.bfs.current.contains(end_coord) {
+                                self.goal_path = self.bfs.trace_back_path(*end_coord).unwrap();
+                            };
+                            if self.bfs.num_steps >= 1_000_000 {
+                                break;
+                            }
+                        }
+                    };
+                };
+
                 ui.label(format!("Step: {}", &self.bfs.num_steps));
                 ui.label(format!("Current moves: {}", &self.bfs.current.len()));
                 ui.label(format!("Visited coords: {}", &self.bfs.visited.len()));
