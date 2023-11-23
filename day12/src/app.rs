@@ -117,7 +117,7 @@ impl eframe::App for MyApp {
                     };
 
                     let cell_stroke = egui::epaint::Stroke {
-                        width: f32::max(cell_width / 32.0, 1.0),
+                        width: f32::max(cell_width / 32.0, 0.25),
                         color: egui::epaint::Color32::WHITE,
                     };
                     let cell_rounding = egui::epaint::Rounding::ZERO;
@@ -129,7 +129,46 @@ impl eframe::App for MyApp {
                     );
                     egui::Shape::Rect(cell_rect_shape)
                 });
+
                 painter.extend(cell_shapes);
+
+                let cell_rects = grid.iter().enumerate().map(|(data_idx, cell)| {
+                    let coord = grid.data_idx_to_coord(data_idx).unwrap();
+                    let top_left = rect.min
+                        + egui::Vec2::from((
+                            coord.1 as f32 * cell_width,
+                            coord.0 as f32 * cell_width,
+                        ));
+                    let bottom_right = rect.min
+                        + egui::Vec2::from((
+                            (coord.1 + 1) as f32 * cell_width,
+                            (coord.0 + 1) as f32 * cell_width,
+                        ));
+                    (egui::Rect::from_two_pos(top_left, bottom_right), coord)
+                });
+
+                if let Some(hover_pos) = response.hover_pos() {
+                    response.on_hover_ui_at_pointer(|ui| {
+                        let canvas_pos = from_screen * hover_pos;
+                        // ui.label(format!("cp:{:?},sp:{:?}", canvas_pos, hover_pos));
+
+                        cell_rects
+                            .filter_map(|x| match x.0.contains(hover_pos) {
+                                true => Some(x.1),
+                                false => None,
+                            })
+                            .for_each(|coord| {
+                                let cell = grid.get_cell_from_coord(coord).unwrap();
+                                let elev = cell.elevation();
+                                let label_text = match cell {
+                                    Cell::Start => format!("Start, elev:{0}", elev),
+                                    Cell::End => format!("End, elev:{0}", elev),
+                                    Cell::Square(_) => format!("Elev:{0}", elev),
+                                };
+                                ui.label(label_text);
+                            });
+                    });
+                };
             }
         });
     }
