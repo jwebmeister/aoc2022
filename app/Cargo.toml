@@ -1,5 +1,5 @@
 [package]
-name = "day12"
+name = "app"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,6 +10,8 @@ thiserror = "1.0"
 egui = "0.24"
 eframe = "0.24"
 rfd = "0.12"
+
+day12 = {path = "../day12"}
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.10"

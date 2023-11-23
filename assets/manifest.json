@@ -1,6 +1,6 @@
 {
-  "name": "AppDay12",
-  "short_name": "app-day12",
+  "name": "AoC 2022 app",
+  "short_name": "app-aoc2022",
   "icons": [
     {
       "src": "./icon-256.png",

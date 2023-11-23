@@ -1,9 +1,9 @@
-var cacheName = 'app-day12';
+var cacheName = 'app-aoc2022';
 var filesToCache = [
   './',
   './index.html',
-  './day12.js',
-  './day12_bg.wasm',
+  './app.js',
+  './app_bg.wasm',
 ];
 
 /* Start the service worker and cache all of the app's content */
