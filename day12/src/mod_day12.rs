@@ -30,6 +30,7 @@ pub struct Bfs {
 }
 
 impl Bfs {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Bfs::default()
     }
@@ -220,6 +221,7 @@ impl Grid {
         Ok(umoves)
     }
 
+    #[allow(dead_code)]
     pub fn get_available_moves_down(
         &self,
         coord: (usize, usize),
@@ -290,6 +292,7 @@ impl Grid {
         Some(&self.data[i])
     }
 
+    #[allow(dead_code)]
     pub fn get_mut_cell_from_coord(&mut self, coord: (usize, usize)) -> Option<&mut Cell> {
         if !self.is_valid_coord(coord) {
             return None;
@@ -328,11 +331,11 @@ impl Grid {
         v
     }
 
-    pub fn iter(self: &Self) -> impl Iterator<Item = &Cell> {
+    pub fn iter(&self) -> impl Iterator<Item = &Cell> {
         self.data.iter()
     }
 
-    pub fn iter_mut(self: &mut Self) -> impl Iterator<Item = &mut Cell> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Cell> {
         self.data.iter_mut()
     }
 }

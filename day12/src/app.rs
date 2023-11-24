@@ -183,24 +183,11 @@ impl eframe::App for AppDay12 {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             if let Some(grid) = &self.grid {
-                // placeholder grid ui
-                /*
-                ui.label(
-                    egui::RichText::new(format!("{:?}", grid)).font(egui::FontId::monospace(10.0)),
-                );
-                */
-
                 // actual grid ui
-                let (mut response, painter) =
+                let (response, painter) =
                     ui.allocate_painter(ui.available_size_before_wrap(), Sense::hover());
 
                 let rect = response.rect;
-
-                let to_screen = egui::emath::RectTransform::from_to(
-                    egui::Rect::from_min_size(egui::Pos2::ZERO, response.rect.square_proportions()),
-                    response.rect,
-                );
-                let from_screen = to_screen.inverse();
 
                 let cell_width = {
                     let maybe_cell_width = rect.width() / grid.width as f32;
@@ -287,7 +274,7 @@ impl eframe::App for AppDay12 {
 
                 painter.extend(bfs_visited);
 
-                let bfs_visited_squares = self.bfs.visited.iter().map(|(coord, _op_prev_coord)| {
+                let bfs_visited_squares = self.bfs.visited.keys().map(|coord| {
                     let top_left = rect.min
                         + egui::Vec2::from((
                             (coord.1 as f32 * cell_width) + (cell_width * 0.3),
@@ -341,12 +328,6 @@ impl eframe::App for AppDay12 {
 
                 if let Some(hover_pos) = response.hover_pos() {
                     response.on_hover_ui_at_pointer(|ui| {
-                        // debug screen pos and cavas pos
-                        /*
-                        let canvas_pos = from_screen * hover_pos;
-                        ui.label(format!("cp:{:?},sp:{:?}", canvas_pos, hover_pos));
-                        */
-
                         cell_rects
                             .filter_map(|x| match x.0.contains(hover_pos) {
                                 true => Some(x.1),
