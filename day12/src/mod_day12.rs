@@ -2,6 +2,14 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use thiserror::Error;
 
+const SMALL_GRID: &str = "Sabqponm\n\
+                            abcryxxl\n\
+                            accszExk\n\
+                            acctuvwj\n\
+                            abdefghi";
+
+const BIG_GRID: &str = include_str!("input.txt");
+
 #[derive(Error, Debug)]
 pub enum MyError {
     #[error(transparent)]
@@ -156,18 +164,25 @@ pub struct Grid {
 
 impl Default for Grid {
     fn default() -> Self {
-        #[rustfmt::skip]
-        let s =  "Sabqponm\n\
-                        abcryxxl\n\
-                        accszExk\n\
-                        acctuvwj\n\
-                        abdefghi";
+        let s = SMALL_GRID;
         let reader = std::io::BufReader::new(s.as_bytes());
         parse_into_grid(reader).unwrap()
     }
 }
 
 impl Grid {
+    pub fn new_small_grid() -> Self {
+        let s = SMALL_GRID;
+        let reader = std::io::BufReader::new(s.as_bytes());
+        parse_into_grid(reader).unwrap()
+    }
+
+    pub fn new_big_grid() -> Self {
+        let s = BIG_GRID;
+        let reader = std::io::BufReader::new(s.as_bytes());
+        parse_into_grid(reader).unwrap()
+    }
+
     pub fn get_available_moves(
         &self,
         coord: (usize, usize),
@@ -412,12 +427,7 @@ mod tests {
 
     #[test]
     fn parse_into_grid_works() {
-        #[rustfmt::skip]
-        let s =  "Sabqponm\n\
-                        abcryxxl\n\
-                        accszExk\n\
-                        acctuvwj\n\
-                        abdefghi";
+        let s = SMALL_GRID;
 
         let reader = std::io::BufReader::new(s.as_bytes());
 
@@ -429,11 +439,7 @@ mod tests {
     #[test]
     fn bfs_works() {
         #[rustfmt::skip]
-        let s =  "Sabqponm\n\
-                        abcryxxl\n\
-                        accszExk\n\
-                        acctuvwj\n\
-                        abdefghi";
+        let s = SMALL_GRID;
 
         let reader = std::io::BufReader::new(s.as_bytes());
 
@@ -453,11 +459,7 @@ mod tests {
     #[test]
     fn bfs_up_works() {
         #[rustfmt::skip]
-        let s =  "Sabqponm\n\
-                        abcryxxl\n\
-                        accszExk\n\
-                        acctuvwj\n\
-                        abdefghi";
+        let s = SMALL_GRID;
 
         let reader = std::io::BufReader::new(s.as_bytes());
 
@@ -477,11 +479,7 @@ mod tests {
     #[test]
     fn bfs_down_works() {
         #[rustfmt::skip]
-        let s =  "Sabqponm\n\
-                        abcryxxl\n\
-                        accszExk\n\
-                        acctuvwj\n\
-                        abdefghi";
+        let s = SMALL_GRID;
 
         let reader = std::io::BufReader::new(s.as_bytes());
 

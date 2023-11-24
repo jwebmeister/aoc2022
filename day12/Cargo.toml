@@ -10,6 +10,7 @@ thiserror = "1.0"
 egui = "0.24"
 eframe = "0.24"
 rfd = "0.12"
+chrono = "0.4"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.10"

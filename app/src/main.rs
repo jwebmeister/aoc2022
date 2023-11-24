@@ -4,7 +4,11 @@ use day12::AppDay12;
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
     env_logger::init();
-    let native_options = eframe::NativeOptions::default();
+    let native_options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([900.0, 400.0]),
+        ..Default::default()
+    };
     eframe::run_native(
         "AoC 2022 app",
         native_options,
