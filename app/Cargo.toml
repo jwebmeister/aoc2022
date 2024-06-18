@@ -1,18 +1,18 @@
 [package]
 name = "app"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 default-run = "app"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-egui = "0.24"
-eframe = "0.24"
+egui = "0.27"
+eframe = "0.27"
 day12 = {path = "../day12"}
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.10"
+env_logger = "0.11"
 futures = "0.3"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

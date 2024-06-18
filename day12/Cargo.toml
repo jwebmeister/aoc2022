@@ -1,19 +1,19 @@
 [package]
 name = "day12"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 thiserror = "1.0"
-egui = "0.24"
-eframe = "0.24"
-rfd = "0.12"
+egui = "0.27"
+eframe = "0.27"
+rfd = "0.14"
 chrono = "0.4"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.10"
+env_logger = "0.11"
 futures = "0.3"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
