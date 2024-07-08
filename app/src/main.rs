@@ -12,7 +12,7 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "AoC 2022 app",
         native_options,
-        Box::new(|cc| Box::new(AppDay12::new(cc))),
+        Box::new(|cc| Ok(Box::new(AppDay12::new(cc)))),
     )
 }
 
@@ -28,7 +28,7 @@ fn main() {
             .start(
                 "the_canvas_id", // hardcode it
                 web_options,
-                Box::new(|cc| Box::new(AppDay12::new(cc))),
+                Box::new(|cc| Ok(Box::new(AppDay12::new(cc)))),
             )
             .await
             .expect("failed to start eframe");

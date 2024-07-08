@@ -12,7 +12,7 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "AppDay12",
         native_options,
-        Box::new(|cc| Box::new(AppDay12::new(cc))),
+        Box::new(|cc| Ok(Box::new(AppDay12::new(cc)))),
     )
 }
 
