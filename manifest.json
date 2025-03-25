@@ -1,0 +1,16 @@
+{
+  "name": "AoC 2022 app",
+  "short_name": "app-aoc2022",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "type": "image/svg+xml"
+    }
+  ],
+  "lang": "en-US",
+  "id": "/index.html",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "white",
+  "theme_color": "white"
+}
