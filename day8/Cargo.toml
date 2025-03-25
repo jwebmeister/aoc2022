@@ -1,11 +1,11 @@
 [package]
 name = "day8"
-version = "0.1.0"
-edition = "2021"
+version = "0.1.1"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 rev_buf_reader = "0.3"
-thiserror = "1.0"
-ndarray = "0.15"
+thiserror = "2"
+ndarray = "0.16"

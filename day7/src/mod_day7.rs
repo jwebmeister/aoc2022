@@ -1,11 +1,9 @@
 use nom::{
     branch::alt,
-    bytes::complete::tag,
-    bytes::complete::take_while1,
+    bytes::complete::{tag, take_while1},
     combinator::{all_consuming, map},
-    sequence::preceded,
-    sequence::separated_pair,
-    Finish, IResult,
+    sequence::{preceded, separated_pair},
+    Finish, IResult, Parser,
 };
 use std::io::prelude::*;
 use thiserror::Error;
@@ -221,7 +219,7 @@ pub fn parse_all_lines<R: std::io::BufRead>(reader: &mut R) -> Result<Vec<Line>,
     reader
         .lines()
         .map(|r_line| match r_line {
-            Ok(line) => match all_consuming(parse_line)(&line).finish() {
+            Ok(line) => match all_consuming(parse_line).parse(&line).finish() {
                 Ok(o) => Ok(o.1),
                 Err(e) => Err(MyError::from(e)),
             },
@@ -234,42 +232,42 @@ fn parse_line(i: &str) -> IResult<&str, Line> {
     alt((
         map(parse_command, Line::Command),
         map(parse_entry, Line::Entry),
-    ))(i)
+    )).parse(i)
 }
 
 fn parse_entry(i: &str) -> IResult<&str, Entry> {
-    alt((parse_dir, parse_file))(i)
+    alt((parse_dir, parse_file)).parse(i)
 }
 
 fn parse_file(i: &str) -> IResult<&str, Entry> {
     map(
         separated_pair(nom::character::complete::u64, tag(" "), parse_path),
         |(size, path)| Entry::File(size, path),
-    )(i)
+    ).parse(i)
 }
 
 fn parse_dir(i: &str) -> IResult<&str, Entry> {
-    map(preceded(tag("dir "), parse_path), Entry::Dir)(i)
+    map(preceded(tag("dir "), parse_path), Entry::Dir).parse(i)
 }
 
 fn parse_command(i: &str) -> IResult<&str, Command> {
     let (i, _) = tag("$ ")(i)?;
-    alt((parse_ls, parse_cd))(i)
+    alt((parse_ls, parse_cd)).parse(i)
 }
 
 fn parse_ls(i: &str) -> IResult<&str, Command> {
-    map(tag("ls"), |_| Command::Ls)(i)
+    map(tag("ls"), |_| Command::Ls).parse(i)
 }
 
 fn parse_cd(i: &str) -> IResult<&str, Command> {
-    map(preceded(tag("cd "), parse_path), Command::Cd)(i)
+    map(preceded(tag("cd "), parse_path), Command::Cd).parse(i)
 }
 
 fn parse_path(i: &str) -> IResult<&str, Utf8PathBuf<Utf8UnixEncoding>> {
     map(
         take_while1(|c: char| "abcdefghijklmnopqrstuvwxyz./".contains(c)),
         Into::into,
-    )(i)
+    ).parse(i)
 }
 
 #[cfg(test)]

@@ -51,7 +51,7 @@ impl eframe::App for AppDay12 {
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::Ui::horizontal(ui, |ui| {
-                egui::widgets::global_dark_light_mode_switch(ui);
+                egui::widgets::global_theme_preference_switch(ui);
 
                 ui.separator();
 
@@ -222,12 +222,13 @@ impl eframe::App for AppDay12 {
                         width: f32::min(cell_width / 32.0, 1.0),
                         color: egui::epaint::Color32::WHITE,
                     };
-                    let cell_rounding = egui::epaint::Rounding::ZERO;
+                    let cell_rounding = egui::epaint::CornerRadius::ZERO;
                     let cell_rect_shape = egui::epaint::RectShape::new(
                         cell_rect,
                         cell_rounding,
                         cell_color,
                         cell_stroke,
+                        egui::StrokeKind::Middle,
                     );
                     egui::Shape::Rect(cell_rect_shape)
                 });
@@ -287,7 +288,7 @@ impl eframe::App for AppDay12 {
                         ));
                     egui::epaint::Shape::rect_filled(
                         egui::Rect::from_two_pos(top_left, bottom_right),
-                        egui::epaint::Rounding::ZERO,
+                        egui::epaint::CornerRadius::ZERO,
                         egui::epaint::Color32::YELLOW,
                     )
                 });
@@ -337,11 +338,11 @@ impl eframe::App for AppDay12 {
                                 let cell = grid.get_cell_from_coord(coord).unwrap();
                                 let elev = cell.elevation();
                                 let label_text = match cell {
-                                    Cell::Start => format!("Start, elev:{0}", elev),
-                                    Cell::End => format!("End, elev:{0}", elev),
-                                    Cell::Square(_) => format!("Elev:{0}", elev),
+                                    Cell::Start => format!("Start,{0}", elev),
+                                    Cell::End => format!("End,{0}", elev),
+                                    Cell::Square(_) => format!("{0}", elev),
                                 };
-                                ui.label(label_text);
+                                ui.add(egui::Label::new(label_text).extend());
                             });
                     });
                 };

@@ -3,7 +3,7 @@ use nom::{
     bytes::complete::tag,
     combinator::{all_consuming, map},
     sequence::preceded,
-    Finish, IResult,
+    Finish, IResult, Parser,
 };
 use std::{collections::VecDeque, io::prelude::*};
 use thiserror::Error;
@@ -65,7 +65,7 @@ pub fn lines_to_result<R: std::io::BufRead>(reader: &mut R) -> Result<(Vec<i32>,
     let mut x: i32 = 1;
     for line in reader.lines() {
         let l = line?;
-        match all_consuming(parse_command)(&l).finish() {
+        match all_consuming(parse_command).parse(&l).finish() {
             Ok((_, cmd)) => match cmd {
                 Command::Noop => {
                     if (cycle - 20) % 40 == 0 {
@@ -113,7 +113,7 @@ pub fn _parse_lines_to_commands<R: std::io::BufRead>(
     let mut v: VecDeque<Command> = VecDeque::new();
     for line in reader.lines() {
         let l = line?;
-        match all_consuming(parse_command)(&l).finish() {
+        match all_consuming(parse_command).parse(&l).finish() {
             Ok(cmd) => v.push_back(cmd.1),
             Err(e) => return Err(e.into()),
         };
@@ -123,17 +123,17 @@ pub fn _parse_lines_to_commands<R: std::io::BufRead>(
 }
 
 fn parse_command(i: &str) -> IResult<&str, Command> {
-    alt((parse_noop, parse_addx))(i)
+    alt((parse_noop, parse_addx)).parse(i)
 }
 
 fn parse_addx(i: &str) -> IResult<&str, Command> {
     map(preceded(tag("addx "), nom::character::complete::i32), |x| {
         Command::Addx(x)
-    })(i)
+    }).parse(i)
 }
 
 fn parse_noop(i: &str) -> IResult<&str, Command> {
-    map(tag("noop"), |_| Command::Noop)(i)
+    map(tag("noop"), |_| Command::Noop).parse(i)
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 extern crate nom;
 
-use nom::Finish;
+use nom::{Finish, Parser};
 use thiserror::Error;
 
 #[derive(Clone, PartialEq, PartialOrd)]
@@ -73,7 +73,7 @@ pub fn parse_move_all_lines(
         if idx < skip_lines {
             continue;
         };
-        match nom::combinator::all_consuming(parse_move_line)(line).finish() {
+        match nom::combinator::all_consuming(parse_move_line).parse(line).finish() {
             Ok((_rest, move_line)) => move_lines.push(move_line),
             Err(e) => return Err(e.into()),
         }
@@ -93,20 +93,20 @@ fn parse_move_line(i: &str) -> nom::IResult<&str, MoveQtyFromTo> {
             code: nom::error::ErrorKind::Digit,
         })
     };
-    let (i_next, n_qty) = nom::combinator::map_res(f_qty, f_parse)(i)?;
+    let (i_next, n_qty) = nom::combinator::map_res(f_qty, f_parse).parse(i)?;
 
     let f_from = nom::sequence::delimited(
         nom::bytes::complete::tag("from "),
         nom::character::complete::digit1,
         nom::bytes::complete::tag(" "),
     );
-    let (i_next, n_from) = nom::combinator::map_res(f_from, f_parse)(i_next)?;
+    let (i_next, n_from) = nom::combinator::map_res(f_from, f_parse).parse(i_next)?;
 
     let f_to = nom::sequence::preceded(
         nom::bytes::complete::tag("to "),
         nom::character::complete::digit1,
     );
-    let (i_next, n_to) = nom::combinator::map_res(f_to, f_parse)(i_next)?;
+    let (i_next, n_to) = nom::combinator::map_res(f_to, f_parse).parse(i_next)?;
 
     Ok((i_next, MoveQtyFromTo(n_qty, n_from, n_to)))
 }
@@ -162,7 +162,7 @@ fn transpose_rev<T>(v: Vec<Vec<Option<T>>>) -> Result<Vec<Vec<T>>, MyError> {
 fn parse_crate_all_lines(buffer: &str) -> Result<Vec<Vec<Option<Crate>>>, MyError> {
     let mut crate_lines = vec![];
     for line in buffer.lines() {
-        match nom::combinator::all_consuming(parse_crate_line)(line).finish() {
+        match nom::combinator::all_consuming(parse_crate_line).parse(line).finish() {
             Ok((_rest, crate_line)) => crate_lines.push(crate_line),
             Err(e) => match parse_is_stack_numbers_line(e.input) {
                 true => break,
@@ -186,7 +186,7 @@ fn parse_crate_line(i: &str) -> nom::IResult<&str, Vec<Option<Crate>>> {
         let (next_i, maybe_c) = nom::combinator::opt(nom::sequence::preceded(
             nom::bytes::complete::tag(" "),
             parse_crate_or_hole,
-        ))(i)?;
+        )).parse(i)?;
         match maybe_c {
             Some(c) => v.push(c),
             None => break,
@@ -201,7 +201,7 @@ fn parse_crate_or_hole(i: &str) -> nom::IResult<&str, Option<Crate>> {
     nom::branch::alt((
         nom::combinator::map(parse_crate, Some),
         nom::combinator::map(parse_hole, |_| None),
-    ))(i)
+    )).parse(i)
 }
 
 fn parse_crate(i: &str) -> nom::IResult<&str, Crate> {
@@ -217,11 +217,11 @@ fn parse_crate(i: &str) -> nom::IResult<&str, Crate> {
         nom::bytes::complete::take(1_usize),
         nom::bytes::complete::tag("]"),
     );
-    nom::combinator::map_res(f, first_char)(i)
+    nom::combinator::map_res(f, first_char).parse(i)
 }
 
 fn parse_hole(i: &str) -> nom::IResult<&str, ()> {
-    nom::combinator::map(nom::bytes::complete::tag("   "), drop)(i)
+    nom::combinator::map(nom::bytes::complete::tag("   "), drop).parse(i)
 }
 
 #[cfg(test)]

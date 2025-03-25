@@ -4,8 +4,8 @@ use nom::{
     character::complete::{digit1, one_of, space0, space1},
     combinator::{map, map_parser},
     multi::separated_list0,
-    sequence::{delimited, preceded, tuple},
-    Finish, IResult,
+    sequence::{delimited, preceded},
+    Finish, IResult, Parser,
 };
 use std::collections::VecDeque;
 use thiserror::Error;
@@ -243,7 +243,7 @@ fn parse_monkey<R: std::io::BufRead>(reader: &mut R) -> Result<Monkey, MyError> 
 }
 
 fn parse_monkey_id(i: &str) -> IResult<&str, u8> {
-    delimited(tag("Monkey "), nom::character::complete::u8, tag(":"))(i)
+    delimited(tag("Monkey "), nom::character::complete::u8, tag(":")).parse(i)
 }
 
 fn parse_starting_items(i: &str) -> IResult<&str, VecDeque<Item>> {
@@ -256,7 +256,7 @@ fn parse_starting_items(i: &str) -> IResult<&str, VecDeque<Item>> {
             ),
             |v| v.into_iter().map(Item).collect::<VecDeque<Item>>(),
         ),
-    )(i)
+    ).parse(i)
 }
 
 fn parse_operation(i: &str) -> IResult<&str, Operation> {
@@ -265,11 +265,11 @@ fn parse_operation(i: &str) -> IResult<&str, Operation> {
         map(
             preceded(
                 tag("Operation: new = "),
-                tuple((
+                (
                     parse_term,
                     preceded(space1, one_of("+*")),
                     preceded(space1, parse_term),
-                )),
+                ),
             ),
             |x| match x.1 {
                 '+' => Operation::Add(x.0, x.2),
@@ -280,7 +280,7 @@ fn parse_operation(i: &str) -> IResult<&str, Operation> {
                 }
             },
         ),
-    )(i)
+    ).parse(i)
 }
 
 fn parse_term(i: &str) -> IResult<&str, Term> {
@@ -288,7 +288,7 @@ fn parse_term(i: &str) -> IResult<&str, Term> {
     let p_digit = map_parser(digit1, nom::character::complete::u64);
     let p_const = map(p_digit, Term::Constant);
 
-    alt((p_old, p_const))(i)
+    alt((p_old, p_const)).parse(i)
 }
 
 fn parse_test_divisible_by(i: &str) -> IResult<&str, TestDivisibleBy> {
@@ -298,7 +298,7 @@ fn parse_test_divisible_by(i: &str) -> IResult<&str, TestDivisibleBy> {
             preceded(tag("Test: divisible by "), nom::character::complete::u64),
             TestDivisibleBy,
         ),
-    )(i)
+    ).parse(i)
 }
 
 fn parse_test_if_true(i: &str) -> IResult<&str, TestIfTrue> {
@@ -311,7 +311,7 @@ fn parse_test_if_true(i: &str) -> IResult<&str, TestIfTrue> {
             ),
             TestIfTrue,
         ),
-    )(i)
+    ).parse(i)
 }
 
 fn parse_test_if_false(i: &str) -> IResult<&str, TestIfFalse> {
@@ -324,7 +324,7 @@ fn parse_test_if_false(i: &str) -> IResult<&str, TestIfFalse> {
             ),
             TestIfFalse,
         ),
-    )(i)
+    ).parse(i)
 }
 
 #[cfg(test)]
